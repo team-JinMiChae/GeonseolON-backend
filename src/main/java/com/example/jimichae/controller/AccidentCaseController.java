@@ -7,8 +7,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.jimichae.controller.chatbot.request.ChatRequest;
-import com.example.jimichae.controller.chatbot.response.ChatResponse;
+import com.example.jimichae.dto.request.chatbot.ChatRequest;
+import com.example.jimichae.dto.response.ChatResponse;
 import com.example.jimichae.service.AccidentCaseService;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,4 +31,11 @@ public class AccidentCaseController {
         return accidentCaseService.getQuestion(requests, servletRequest);
     }
 
+    /*@PostMapping
+    public void saveAccidentCase(
+        @RequestParam("pageNo")
+        int pageNo
+    ) {
+        accidentCaseService.saveAccidentCase(pageNo);
+    }*/ // TODO: 빼기
 }
