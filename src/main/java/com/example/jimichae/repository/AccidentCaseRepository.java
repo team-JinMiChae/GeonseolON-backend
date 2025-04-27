@@ -7,5 +7,5 @@ import com.example.jimichae.entity.AccidentCase;
 
 @Repository
 public interface AccidentCaseRepository extends JpaRepository<AccidentCase,Long> {
-	boolean existsAccidentCaseByTheVector(Float[] theVector);
+	boolean existsAccidentCaseByBoardNo(int boardNo);
 }
