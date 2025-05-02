@@ -8,6 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment:  JIB_ENV
 
     steps:
       - name: Checkout code
@@ -26,5 +27,5 @@ jobs:
       - name: Build and Push Docker Image with Jib
         run: ./gradlew jib
         env:
-          DOCKER_USERNAME: ${{ secrets.JIB_ENV.DOCKER_USERNAME }}
-          DOCKER_PASSWORD: ${{ secrets.JIB_ENV.DOCKER_PASSWORD }}
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
