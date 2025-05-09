@@ -28,7 +28,7 @@ jib {
     container{
         environment = Map.of(
                 "TZ", "Asia/Seoul"
-        );
+        )
     }
 }
 
