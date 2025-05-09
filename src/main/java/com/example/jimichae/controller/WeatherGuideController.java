@@ -1,7 +1,5 @@
 package com.example.jimichae.controller;
 
-import java.util.List;
-
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -20,7 +18,7 @@ public class WeatherGuideController {
 	}
 
 	@GetMapping
-	public List<WeatherInfoResponse> getWeather(
+	public WeatherInfoResponse getWeather(
 		@RequestParam("latitude")
 		int latitude,
 		@RequestParam("longitude")
