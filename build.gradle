@@ -25,6 +25,11 @@ jib {
             password = System.getenv("DOCKER_PASSWORD") ?: ""
         }
     }
+    container{
+        environment = Map.of(
+                "TZ", "Asia/Seoul"
+        );
+    }
 }
 
 configurations {
