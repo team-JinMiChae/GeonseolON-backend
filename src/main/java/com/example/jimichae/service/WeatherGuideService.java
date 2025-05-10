@@ -29,6 +29,8 @@ import com.example.jimichae.dto.response.WeatherInfoResponse;
 import com.example.jimichae.entity.WeatherCategory;
 import com.example.jimichae.entity.WeatherType;
 import com.example.jimichae.repository.WeatherGuideCacheRepository;
+import com.example.jimichae.util.GeoUtil;
+import com.example.jimichae.util.LatXLngY;
 
 @Service
 public class WeatherGuideService {
@@ -42,9 +44,9 @@ public class WeatherGuideService {
 		this.weatherGuideCacheRepository = weatherGuideCacheRepository;
 	}
 
-	public WeatherInfoResponse getWeatherGuide(int latitude, int longitude) {
+	public WeatherInfoResponse getWeatherGuide(double latitude, double longitude) {
 		String encodedDataType = URLEncoder.encode("JSON", StandardCharsets.UTF_8);
-		String regionName =getRegionName(latitude, longitude);
+		String regionName =getRegionName(latitude,longitude);
 		LocalDateTime koreaDateTime = LocalDateTime.now();
 		String koreaDate = koreaDateTime.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
 		String onTime = koreaDateTime.withMinute(0).format(DateTimeFormatter.ofPattern("HHmm"));
@@ -52,6 +54,7 @@ public class WeatherGuideService {
 			return weatherGuideCacheRepository.getWeatherInfo(koreaDate, onTime, regionName);
 		}
 		GetBaseDateTime baseDateTime = getBaseDateTime(koreaDateTime);
+		LatXLngY latXLngY = GeoUtil.convert(latitude,longitude);
 		URI uri = UriComponentsBuilder.fromUriString("https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst")
 			.queryParam("serviceKey", weatherGuideProperties.getApiKey())
 			.queryParam("pageNo", 1)
@@ -59,8 +62,8 @@ public class WeatherGuideService {
 			.queryParam("dataType", encodedDataType)
 			.queryParam("base_date", URLEncoder.encode(baseDateTime.baseDate(), StandardCharsets.UTF_8))
 			.queryParam("base_time", URLEncoder.encode(baseDateTime.baseTime(), StandardCharsets.UTF_8))
-			.queryParam("nx", latitude)
-			.queryParam("ny", longitude)
+			.queryParam("nx", latXLngY.x)
+			.queryParam("ny", latXLngY.y)
 			.build(true)
 			.encode(StandardCharsets.UTF_8)
 			.toUri();
@@ -84,7 +87,7 @@ public class WeatherGuideService {
 			if(weatherGuideCacheRepository.existsByTmxAndTmn(koreaDate,regionName)){
 				tmxAndTmn = weatherGuideCacheRepository.getRegionTMXAndTMN(koreaDate,regionName);
 			}else {
-				tmxAndTmn = getTmxAndTmn(koreaDateTime,latitude,longitude);
+				tmxAndTmn = getTmxAndTmn(koreaDateTime,latXLngY);
 				weatherGuideCacheRepository.saveTmxAndTmn(koreaDate,regionName, tmxAndTmn);
 			}
 			List<WeatherInfoResponse> list = map.entrySet().stream().map(entry -> {
@@ -249,7 +252,7 @@ public class WeatherGuideService {
 				return advice.toString();
 			}
 
-			private String[] getTmxAndTmn(LocalDateTime dateTime, int latitude, int longitude) {
+			private String[] getTmxAndTmn(LocalDateTime dateTime, LatXLngY latXLngY) {
 				String encodedDataType = URLEncoder.encode("JSON", StandardCharsets.UTF_8);
 				String baseDate = dateTime.minusDays(1).format(DateTimeFormatter.ofPattern("yyyyMMdd"));
 				URI uri = UriComponentsBuilder.fromUriString("https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst")
@@ -259,8 +262,8 @@ public class WeatherGuideService {
 					.queryParam("dataType", encodedDataType)
 					.queryParam("base_date", URLEncoder.encode(baseDate, StandardCharsets.UTF_8))
 					.queryParam("base_time", URLEncoder.encode("2300", StandardCharsets.UTF_8))
-					.queryParam("nx", latitude)
-					.queryParam("ny", longitude)
+					.queryParam("nx", latXLngY.x)
+					.queryParam("ny", latXLngY.y)
 					.build(true)
 					.encode(StandardCharsets.UTF_8)
 					.toUri();
@@ -283,7 +286,7 @@ public class WeatherGuideService {
 				return new String[]{null,null};
 			}
 
-			private String getRegionName(int latitude, int longitude) {
+			private String getRegionName(double latitude, double longitude) {
 				HttpHeaders headers = new HttpHeaders();
 				headers.set("Authorization", "KakaoAK " + weatherGuideProperties.getKakaoMapKey());
 				HttpEntity<String> entity = new HttpEntity<>(headers);

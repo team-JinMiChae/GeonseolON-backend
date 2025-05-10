@@ -20,9 +20,9 @@ public class WeatherGuideController {
 	@GetMapping
 	public WeatherInfoResponse getWeather(
 		@RequestParam("latitude")
-		int latitude,
+		double latitude,
 		@RequestParam("longitude")
-		int longitude
+		double longitude
 	){
 		return weatherGuideService.getWeatherGuide(latitude, longitude);
 	}
