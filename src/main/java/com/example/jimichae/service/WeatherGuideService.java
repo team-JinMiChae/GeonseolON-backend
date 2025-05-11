@@ -13,17 +13,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import com.example.jimichae.config.WeatherGuideProperties;
 import com.example.jimichae.dto.GetBaseDateTime;
-import com.example.jimichae.dto.response.KakaoMapApiResponse;
 import com.example.jimichae.dto.response.WeatherApiResponse;
 import com.example.jimichae.dto.response.WeatherInfoResponse;
 import com.example.jimichae.entity.WeatherCategory;
@@ -44,9 +39,8 @@ public class WeatherGuideService {
 		this.weatherGuideCacheRepository = weatherGuideCacheRepository;
 	}
 
-	public WeatherInfoResponse getWeatherGuide(double latitude, double longitude) {
+	public WeatherInfoResponse getWeatherGuide(double latitude, double longitude, String regionName) {
 		String encodedDataType = URLEncoder.encode("JSON", StandardCharsets.UTF_8);
-		String regionName =getRegionName(latitude,longitude);
 		LocalDateTime koreaDateTime = LocalDateTime.now();
 		String koreaDate = koreaDateTime.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
 		String onTime = koreaDateTime.withMinute(0).format(DateTimeFormatter.ofPattern("HHmm"));
@@ -286,7 +280,7 @@ public class WeatherGuideService {
 				return new String[]{null,null};
 			}
 
-			private String getRegionName(double latitude, double longitude) {
+			/*private String getRegionName(double latitude, double longitude) {
 				HttpHeaders headers = new HttpHeaders();
 				headers.set("Authorization", "KakaoAK " + weatherGuideProperties.getKakaoMapKey());
 				HttpEntity<String> entity = new HttpEntity<>(headers);
@@ -309,5 +303,5 @@ public class WeatherGuideService {
 				} else {
 					return "파악 불가";
 				}
-			}
+			}*/
 	}

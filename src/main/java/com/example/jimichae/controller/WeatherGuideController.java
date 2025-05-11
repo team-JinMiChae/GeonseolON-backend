@@ -22,8 +22,10 @@ public class WeatherGuideController {
 		@RequestParam("latitude")
 		double latitude,
 		@RequestParam("longitude")
-		double longitude
+		double longitude,
+		@RequestParam(value = "regionName")
+		String regionName
 	){
-		return weatherGuideService.getWeatherGuide(latitude, longitude);
+		return weatherGuideService.getWeatherGuide(latitude, longitude, regionName);
 	}
 }
