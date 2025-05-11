@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    environment:  JIB_ENV
+    environment:  JIB_ENV # Jib 환경변수 설정
 
     steps:
       - name: Checkout code
@@ -21,10 +21,10 @@ jobs:
           java-version: '21'
           cache: gradle  # Java Setup에서 기본 캐시 사용
 
-      - name: Grant execute permission to Gradle wrapper
+      - name: Grant execute permission to Gradle wrapper # Gradle wrapper에 실행 권한 부여하여 Jib 빌드
         run: chmod +x ./gradlew
 
-      - name: Build and Push Docker Image with Jib
+      - name: Build and Push Docker Image with Jib # Jib을 사용하여 OCI 이미지 빌드 및 푸시
         run: ./gradlew jib
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
