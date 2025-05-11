@@ -29,8 +29,6 @@ public class WeatherInfoResponse{
 	String fcstTime;
 	@Schema(description = "예보 날짜")
 	String fcstDate;
-	@Schema(description = "지역 이름")
-	String regionName;
 	@Schema(description = "날씨에 따른 멘트")
 	String weatherMent;
 }

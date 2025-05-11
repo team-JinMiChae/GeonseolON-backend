@@ -86,7 +86,7 @@ public class WeatherGuideService {
 			}
 			List<WeatherInfoResponse> list = map.entrySet().stream().map(entry -> {
 					Map<String, String> timeMap = entry.getValue();
-					return getWeatherInfoResponse(entry.getKey(), timeMap, tmxAndTmn, regionName);
+					return getWeatherInfoResponse(entry.getKey(), timeMap, tmxAndTmn);
 				})
 				.sorted(Comparator.comparing(WeatherInfoResponse::getFcstTime))
 				.toList();
@@ -128,7 +128,7 @@ public class WeatherGuideService {
 		return new GetBaseDateTime(formattedDate, formattedTime);
 	}
 
-	private WeatherInfoResponse getWeatherInfoResponse(String fcstDateTime,Map<String, String> timeMap, String[] tmxAndTmn, String regionName) {
+	private WeatherInfoResponse getWeatherInfoResponse(String fcstDateTime,Map<String, String> timeMap, String[] tmxAndTmn) {
 			WeatherType type =  WeatherType.NO_DATA;
 			String pty = timeMap.get(WeatherCategory.PTY.name());
 			switch (pty) {
@@ -157,7 +157,6 @@ public class WeatherGuideService {
 			.fcstTime(splitDateTime[1])
 			.fcstDate(splitDateTime[0])
 			.type(type)
-			.regionName(regionName)
 			.weatherMent(contents)
 			.build();
 	}
@@ -279,29 +278,4 @@ public class WeatherGuideService {
 			}
 				return new String[]{null,null};
 			}
-
-			/*private String getRegionName(double latitude, double longitude) {
-				HttpHeaders headers = new HttpHeaders();
-				headers.set("Authorization", "KakaoAK " + weatherGuideProperties.getKakaoMapKey());
-				HttpEntity<String> entity = new HttpEntity<>(headers);
-				URI uri = UriComponentsBuilder.fromUriString("https://dapi.kakao.com/v2/local/geo/coord2regioncode")
-					.queryParam("x", longitude)
-					.queryParam("y", latitude)
-					.build(true)
-					.encode(StandardCharsets.UTF_8)
-					.toUri();
-				ResponseEntity<KakaoMapApiResponse> response = restTemplate.exchange(
-					uri,
-					HttpMethod.GET,
-					entity,
-					KakaoMapApiResponse.class
-				);
-
-				if (response.getBody() != null && response.getBody().getMeta() != null && response.getBody().getMeta().getTotal_count() > 0) {
-					KakaoMapApiResponse.Document document = response.getBody().getDocuments()[0];
-					return document.getRegion_1depth_name() + " " + document.getRegion_2depth_name();
-				} else {
-					return "파악 불가";
-				}
-			}*/
 	}
