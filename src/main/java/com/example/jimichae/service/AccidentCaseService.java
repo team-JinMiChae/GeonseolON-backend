@@ -9,6 +9,8 @@ import java.util.List;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.parser.Parser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -28,11 +30,11 @@ import com.azure.ai.inference.models.EmbeddingsResult;
 import com.azure.core.credential.AzureKeyCredential;
 import com.example.jimichae.config.AccidentCaseProperties;
 import com.example.jimichae.config.GithubProperties;
+import com.example.jimichae.dto.AccidentCaseData;
 import com.example.jimichae.dto.request.chatbot.ChatRequest;
 import com.example.jimichae.dto.request.chatbot.SenderType;
-import com.example.jimichae.dto.response.ChatResponse;
-import com.example.jimichae.dto.AccidentCaseData;
 import com.example.jimichae.dto.response.AccidentCaseResponse;
+import com.example.jimichae.dto.response.ChatResponse;
 import com.example.jimichae.entity.AccidentCase;
 import com.example.jimichae.repository.AccidentCaseCacheRepository;
 import com.example.jimichae.repository.AccidentCaseRepository;
@@ -44,6 +46,7 @@ import jakarta.servlet.http.HttpServletRequest;
 @Service
 public class AccidentCaseService {
 
+	private final Logger log =LoggerFactory.getLogger(AccidentCaseService.class);
 	private final RestTemplate restTemplate;
 	private final AccidentCaseProperties accidentCaseProperties;
 	private final GithubProperties githubProperties;
@@ -82,12 +85,12 @@ public class AccidentCaseService {
 			.buildClient();
 	}
 
-	@Transactional
 	// @Scheduled(cron = "0 0 5 * * *") TODO : 주석 풀기
 	public void saveAccidentCase(int pageNo) {
 		int numOfRows = 50;
 		int newPage = -1;
 		try {
+			int count = 0;
 			for (int i= pageNo; i<=100; i++) {
 				newPage = i;
 				List<AccidentCaseData> response = parseResponse(newPage, numOfRows);
@@ -97,25 +100,30 @@ public class AccidentCaseService {
 						if (accidentCaseRepository.existsAccidentCaseByBoardNo(accidentCaseDatum.boardNo())) {
 							continue;
 						}
-						accidentCases.add(new AccidentCase(0L, null, accidentCaseDatum.content(), accidentCaseDatum.boardNo()));
+						accidentCases.add(new AccidentCase(null, null, accidentCaseDatum.content(), accidentCaseDatum.boardNo()));
 					}
 					if (!accidentCases.isEmpty()) {
 						List<String> originMessages = accidentCases.stream()
 							.map(AccidentCase::getOriginalText)
 							.toList();
 						saveData(accidentCases, getEmbeddedString(originMessages));
-						System.out.println("성공 : " + newPage);
+						log.info("성공 : " + newPage);
 					}else {
-						System.out.println("이미 있는뎅");
+						count++;
+						if (count > 3) {
+							log.info("더이상 추가할 데이터가 없습니다.");
+							break;
+						}
 					}
+					log.info("전부 저장됨");
 				}else {
-					System.out.println("없는뎅");
+					log.info("더이상 추가할 데이터가 없습니다.");
 					break;
 				}
 			}
 		} catch (Exception e){
-			System.out.println("여기까지 됨"+ newPage);
-			System.out.println("에러 : " + e.getMessage());
+			log.warn("여기까지 됨"+ newPage);
+			log.error("에러 : " + e.getMessage());
 		}
 	}
 
@@ -184,12 +192,20 @@ public class AccidentCaseService {
 		return List.of();
 	}
 
-    private List<Float[]> getEmbeddedString(List<String> originMessages) {
+    private List<float[]> getEmbeddedString(List<String> originMessages) {
 		EmbeddingsResult result = client.embed(originMessages, null, null, null, "text-embedding-3-large", null);
-    	return  result.getData().stream().map(embedding -> embedding.getEmbeddingList().toArray(new Float[0])).toList();
+    	return  result.getData().stream().map(embedding -> {
+				Float[] floatArray = embedding.getEmbeddingList().toArray(new Float[0]);
+				float[] primitiveArray = new float[floatArray.length];
+				for (int i = 0; i < floatArray.length; i++) {
+					primitiveArray[i] = floatArray[i]; // 언박싱
+				}
+				return primitiveArray;
+			})
+			.toList();
     }
 
-	private void saveData(List<AccidentCase> data, List<Float[]> embedding) {
+	private void saveData(List<AccidentCase> data, List<float[]> embedding) {
 		for (int i = 0; i < data.size(); i++) {
 			data.get(i).setTheVector(embedding.get(i));
 		}
@@ -197,7 +213,7 @@ public class AccidentCaseService {
 	}
 
 	private List<ChatRequest> getRagResult(String question) {
-		final Float[] vector = getEmbeddedString(List.of(question)).getFirst();
+		final float[] vector = getEmbeddedString(List.of(question)).getFirst();
 		return em.createQuery(
 				"select e.originalText from AccidentCase e order by cosine_distance(e.theVector, :vec) asc limit 10",
 				String.class)
@@ -268,8 +284,7 @@ public class AccidentCaseService {
 		"18. You must provide accurate information based on the latest construction safety regulations and legal guidelines.",
 		"19. You should proactively suggest preventive measures for common hazardous situations frequently occurring at construction sites.",
 		"20. You must deliver responses in Markdown format.",
-		"21. When a user includes an incident in their question, you are required to summarize the case and provide an appropriate answer based on it.",
-		"22. If there are multiple cases related to the user’s question, summarize each relevant case individually. If a case does not seem related to the question, you are not required to summarize it."
+		"21. Since you must respond with reference to accident cases, if there are accident cases related to the user’s question, each should be summarized individually, and unrelated cases do not need to be summarized."
 	);
 
 	private final String GET_KEYWORD_PROMPT = String.join("\n",

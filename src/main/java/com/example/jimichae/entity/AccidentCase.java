@@ -11,33 +11,33 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Lob;
 import jakarta.persistence.SequenceGenerator;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
 @Entity
 @Getter
 @Setter
-@SequenceGenerator(name = "accident_case_seq", sequenceName = "accident_case_seq", allocationSize = 1)
+@SequenceGenerator(name = "accident_case_seq", sequenceName = "accident_case_seq", allocationSize = 1, initialValue = 1)
+@AllArgsConstructor
 public class AccidentCase{
     @Id
-    @GeneratedValue(strategy=GenerationType.IDENTITY, generator = "accident_case_seq")
+    @GeneratedValue(strategy=GenerationType.SEQUENCE, generator = "accident_case_seq")
     Long id;
-    @Column(nullable = false)
-    @JdbcTypeCode(SqlTypes.VECTOR)
+    @Column(nullable = false, columnDefinition = "VECTOR(3072)")
+    @JdbcTypeCode(SqlTypes.VECTOR_FLOAT32)
     @Array(length = 3072)
-    Float[] theVector;
-    @Column(nullable = false)
+    float[] theVector;
+    @Column(nullable = false, columnDefinition = "CLOB")
     @Lob
     String originalText;
     @Column(nullable = false)
     int boardNo;
 
-    public AccidentCase(Long id, Float[] theVector, String originalText, int boardNo) {
-        this.id = id;
-        this.theVector = theVector;
-        this.originalText = originalText;
-        this.boardNo = boardNo;
+    public AccidentCase() {
+        this.id = null;
+        this.theVector = new float[3072];
+        this.originalText = "";
+        this.boardNo = 0;
     }
-
-    public  AccidentCase() {this(0L, new Float[0], "", -1);}
 }
