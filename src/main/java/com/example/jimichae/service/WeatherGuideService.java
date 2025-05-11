@@ -91,9 +91,9 @@ public class WeatherGuideService {
 				.sorted(Comparator.comparing(WeatherInfoResponse::getFcstTime))
 				.toList();
 
-			list.forEach(it-> {
-				weatherGuideCacheRepository.saveWeatherInfo(it.getFcstDate(),it.getFcstTime(),regionName,it);
-			});
+			for (WeatherInfoResponse it : list) {
+				weatherGuideCacheRepository.saveWeatherInfo(it.getFcstDate(), it.getFcstTime(), regionName, it);
+			}
 			return list.getFirst();
 		}
 

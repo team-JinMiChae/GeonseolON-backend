@@ -8,34 +8,28 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.SequenceGenerator;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 @Entity
 @Getter
-@SequenceGenerator(name = "institution_seq", sequenceName = "institution_seq", allocationSize = 1)
+@AllArgsConstructor
+@SequenceGenerator(name = "institution_seq", sequenceName = "institution_seq", allocationSize = 1, initialValue = 1)
 public class Institution {
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY, generator = "institution_seq")
+	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "institution_seq")
 	Long id;
 
 	@Column(nullable = false)
-	private String name;
+	String name;
 
 	@Column(nullable = false, columnDefinition = "geometry(Point, 4326)")
-	private Point geom;
+	Point geom;
 
-	private String phoneNumber;
+	String phoneNumber;
 
 	//TODO : 속성 더 추가하기
-
-	public Institution(Long id, String name, Point geom, String phoneNumber) {
-		this.id = id;
-		this.name = name;
-		this.geom = geom;
-		this.phoneNumber = phoneNumber;
-	}
-
 	public Institution() {
-		this(0L, "", null,""); // TODO: null값이 맞나?
+		this(null, "", null,""); // TODO: null값이 맞나?
 	}
 }
