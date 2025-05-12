@@ -61,10 +61,6 @@ public class AccidentCaseService {
 		"gpt-4.1-nano",
 		"gpt-4o",
 		"gpt-4o-mini",
-		"gpt-o1",
-		"gpt-o1-mini",
-		"o3",
-		"o3-mini",
 		"o4-mini",
 		"Llama-4-Scout-17B-16E-Instruct",
 		"Llama-4-Maverick-17B-128E-Instruct-FP8"
