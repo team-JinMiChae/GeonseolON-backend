@@ -60,7 +60,7 @@ public class AccidentCaseService {
 		"gpt-4.1-mini",
 		"gpt-4.1-nano",
 		"gpt-4o",
-		"gpt-4o-mini",
+		"openai/o4-mini",
 		"o4-mini",
 		"Llama-4-Scout-17B-16E-Instruct",
 		"Llama-4-Maverick-17B-128E-Instruct-FP8"
