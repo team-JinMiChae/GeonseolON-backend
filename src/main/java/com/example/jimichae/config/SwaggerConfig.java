@@ -14,8 +14,8 @@ public class SwaggerConfig {
 		return new OpenAPI()
 			.components(new Components())
 			.info(new Info()
-				.title("JIMICHAE API")
-				.description("JIMICHAE API 명세서")
+				.title("JINMICHAE API")
+				.description("JINMICHAE API 명세서")
 				.version("v1.0.0"));
 	}
 }

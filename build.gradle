@@ -19,7 +19,7 @@ jib {
         image = "eclipse-temurin:21-jre"
     }
     to {
-        image = 'chaechae121/jimichae:latest'
+        image = 'chaechae121/jinmichae:latest'
         auth {
             username = System.getenv("DOCKER_USERNAME") ?: ""
             password = System.getenv("DOCKER_PASSWORD") ?: ""
