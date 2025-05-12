@@ -26,9 +26,9 @@ jib {
         }
     }
     container{
-        environment = Map.of(
-                "TZ", "Asia/Seoul"
-        )
+        environment = [
+                'TZ': 'Asia/Seoul'
+        ]
     }
 }
 

@@ -5,12 +5,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class HealthController {
-	@GetMapping("/api/v1/health")
+	@GetMapping("/health")
 	public String health() {
 		return "OK";
 	}
 
-	@GetMapping("/api/v1/ready")
+	@GetMapping("/ready")
 	public String ready() {
 		return "READY";
 	}
