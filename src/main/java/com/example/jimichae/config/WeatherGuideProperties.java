@@ -11,5 +11,4 @@ import lombok.Setter;
 @Setter
 public class WeatherGuideProperties {
 	String apiKey;
-	String kakaoMapKey;
 }
