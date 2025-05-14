@@ -2,7 +2,7 @@ package com.example.jimichae.controller;
 
 import java.util.List;
 
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -22,7 +22,7 @@ public class AccidentCaseController {
         this.accidentCaseService = accidentCaseService;
     }
 
-    @GetMapping
+    @PostMapping
     public ChatResponse getQuestion(
         @RequestBody
         List<ChatRequest> requests,
