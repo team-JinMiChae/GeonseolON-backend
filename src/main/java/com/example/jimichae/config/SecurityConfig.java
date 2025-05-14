@@ -35,8 +35,7 @@ public class SecurityConfig {
 	public CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration corsConfig = new CorsConfiguration();
 
-		corsConfig.setAllowedOrigins(
-			List.of("http://localhost:8080", "http://localhost:5173","http://localhost:3000"));
+		corsConfig.setAllowedOrigins(List.of("http://localhost:8080", "http://localhost:5173","http://localhost:3000", "https://geonseol-on-frontend-n5xk.vercel.app"));
 		corsConfig.setAllowedMethods(List.of("GET", "POST", "PATCH", "DELETE", "PUT", "OPTIONS"));
 		corsConfig.setAllowedHeaders(List.of("*"));
 
