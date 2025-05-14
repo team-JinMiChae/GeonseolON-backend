@@ -60,8 +60,7 @@ public class AccidentCaseService {
 		"gpt-4.1-mini",
 		"gpt-4.1-nano",
 		"gpt-4o",
-		"openai/o4-mini",
-		"o4-mini",
+		"gpt-4o-mini",
 		"Llama-4-Scout-17B-16E-Instruct",
 		"Llama-4-Maverick-17B-128E-Instruct-FP8"
 	);
@@ -96,7 +95,7 @@ public class AccidentCaseService {
 						if (accidentCaseRepository.existsAccidentCaseByBoardNo(accidentCaseDatum.boardNo())) {
 							continue;
 						}
-						accidentCases.add(new AccidentCase(null, null, accidentCaseDatum.content(), accidentCaseDatum.boardNo()));
+						accidentCases.add(new AccidentCase(null, null, accidentCaseDatum.content(), accidentCaseDatum.boardNo(), accidentCaseDatum.keyword()));
 					}
 					if (!accidentCases.isEmpty()) {
 						List<String> originMessages = accidentCases.stream()
@@ -183,7 +182,7 @@ public class AccidentCaseService {
 		if (response != null && response.getBody() != null && response.getBody().getItems() != null) {
 			return response.getBody().getItems().getItem().stream()
 				.map(item -> new AccidentCaseData(normalizeText(item.getKeyword() + item.getContents()),
-					item.getBoardno())).toList();
+					item.getBoardno(), item.getKeyword())).toList();
 		}
 		return List.of();
 	}
@@ -236,7 +235,7 @@ public class AccidentCaseService {
 		}).toList();
 		chatMessages.addAll(chatRequestMessageList);
 		ChatCompletionsOptions chatCompletionsOptions = new ChatCompletionsOptions(chatMessages);
-		chatCompletionsOptions.setModel(MODELS.get(ip.hashCode() % MODELS.size()));
+		chatCompletionsOptions.setModel(MODELS.get(Math.abs(ip.hashCode()) % MODELS.size()));
 
 		ChatCompletions completions = client.complete(chatCompletionsOptions);
 		return new ChatResponse(completions.getChoices().getFirst().getMessage().getContent());
@@ -253,7 +252,7 @@ public class AccidentCaseService {
 		chatMessages.add(new ChatRequestUserMessage(question));
 
 		ChatCompletionsOptions chatCompletionsOptions = new ChatCompletionsOptions(chatMessages);
-		chatCompletionsOptions.setModel(MODELS.get(ip.hashCode() % MODELS.size()));
+		chatCompletionsOptions.setModel(MODELS.get(Math.abs(ip.hashCode()) % MODELS.size()));
 
 		ChatCompletions completions = client.complete(chatCompletionsOptions);
 		return completions.getChoices().getFirst().getMessage().getContent();

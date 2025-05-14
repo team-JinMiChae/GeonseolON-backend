@@ -33,11 +33,14 @@ public class AccidentCase{
     String originalText;
     @Column(nullable = false)
     int boardNo;
+    @Column(nullable = false)
+    String keyword;
 
     public AccidentCase() {
         this.id = null;
         this.theVector = new float[3072];
         this.originalText = "";
         this.boardNo = 0;
+        this.keyword = "";
     }
 }
