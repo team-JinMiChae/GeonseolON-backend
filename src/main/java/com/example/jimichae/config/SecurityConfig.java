@@ -18,16 +18,15 @@ import lombok.RequiredArgsConstructor;
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
-public class SecurityConfig {
+public class SecurityConfig{
 
 	@Bean
 	SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 		http
 			.cors(Customizer.withDefaults())
 			.csrf(AbstractHttpConfigurer::disable)
-			.authorizeHttpRequests(auth -> auth
-				.anyRequest().permitAll()
-			);
+			.authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+			.exceptionHandling();
 		return http.build();
 	}
 
