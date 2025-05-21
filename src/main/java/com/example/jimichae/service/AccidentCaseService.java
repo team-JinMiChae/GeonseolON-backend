@@ -1,8 +1,7 @@
 package com.example.jimichae.service;
 
-import java.net.URI;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
+import static com.example.jimichae.exception.ErrorCode.*;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,8 +12,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import com.azure.ai.inference.ChatCompletionsClient;
 import com.azure.ai.inference.ChatCompletionsClientBuilder;
@@ -36,6 +33,7 @@ import com.example.jimichae.dto.request.chatbot.SenderType;
 import com.example.jimichae.dto.response.AccidentCaseResponse;
 import com.example.jimichae.dto.response.ChatResponse;
 import com.example.jimichae.entity.AccidentCase;
+import com.example.jimichae.exception.BaseException;
 import com.example.jimichae.repository.AccidentCaseCacheRepository;
 import com.example.jimichae.repository.AccidentCaseRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -47,15 +45,14 @@ import jakarta.servlet.http.HttpServletRequest;
 public class AccidentCaseService {
 
 	private final Logger log =LoggerFactory.getLogger(AccidentCaseService.class);
-	private final RestTemplate restTemplate;
-	private final AccidentCaseProperties accidentCaseProperties;
 	private final GithubProperties githubProperties;
 	private final AccidentCaseRepository accidentCaseRepository;
 	private final AccidentCaseCacheRepository accidentCaseCacheRepository;
 	private final EntityManager em;
-	private final EmbeddingsClient client;
+	private final EmbeddingsClient embeddingsClient;
+	private final ChatCompletionsClient chatCompletionsClient;
 	private final String END_POINT = "https://models.inference.ai.azure.com";
-	private final List<String> MODELS = List.of(
+	private List<String> MODELS = List.of(
 		"gpt-4.1",
 		"gpt-4.1-mini",
 		"gpt-4.1-nano",
@@ -64,19 +61,22 @@ public class AccidentCaseService {
 		"Llama-4-Scout-17B-16E-Instruct",
 		"Llama-4-Maverick-17B-128E-Instruct-FP8"
 	);
+	private ApiUtils apiUtils;
 
 	public AccidentCaseService(AccidentCaseProperties accidentCaseProperties, GithubProperties githubProperties,
 		AccidentCaseRepository accidentCaseRepository, AccidentCaseCacheRepository accidentCaseCacheRepository,
 		EntityManager em) {
-		this.restTemplate = new RestTemplate();
 		this.githubProperties = githubProperties;
-		this.accidentCaseProperties = accidentCaseProperties;
 		this.accidentCaseRepository = accidentCaseRepository;
 		this.accidentCaseCacheRepository = accidentCaseCacheRepository;
 		this.em = em;
-		this.client = new EmbeddingsClientBuilder()
+		this.embeddingsClient = new EmbeddingsClientBuilder()
 			.credential(new AzureKeyCredential(accidentCaseProperties.getEmbeddingKey()))
 			.endpoint(accidentCaseProperties.getEmbeddingUrl())
+			.buildClient();
+		this.chatCompletionsClient = new ChatCompletionsClientBuilder()
+			.credential(new AzureKeyCredential(githubProperties.getToken()))
+			.endpoint(END_POINT)
 			.buildClient();
 	}
 
@@ -88,7 +88,7 @@ public class AccidentCaseService {
 			int count = 0;
 			for (int i= pageNo; i<=100; i++) {
 				newPage = i;
-				List<AccidentCaseData> response = parseResponse(newPage, numOfRows);
+				List<AccidentCaseData> response = parseAccidentCaseData(newPage, numOfRows);
 				if (!response.isEmpty()) {
 					List<AccidentCase> accidentCases = new ArrayList<>();
 					for (AccidentCaseData accidentCaseDatum : response) {
@@ -102,7 +102,7 @@ public class AccidentCaseService {
 							.map(AccidentCase::getOriginalText)
 							.toList();
 						saveData(accidentCases, getEmbeddedString(originMessages));
-						log.info("성공 : " + newPage);
+						log.info("성공 : {}", newPage);
 					}else {
 						count++;
 						if (count > 3) {
@@ -110,15 +110,14 @@ public class AccidentCaseService {
 							break;
 						}
 					}
-					log.info("전부 저장됨");
 				}else {
 					log.info("더이상 추가할 데이터가 없습니다.");
 					break;
 				}
 			}
 		} catch (Exception e){
-			log.warn("여기까지 됨"+ newPage);
-			log.error("에러 : " + e.getMessage());
+			log.warn("여기까지 됨{}", newPage);
+			log.error("에러 : {}", e.getMessage());
 		}
 	}
 
@@ -166,29 +165,17 @@ public class AccidentCaseService {
 		return htmlContent.replaceAll("\\s+", " ").trim(); // Return original content if parsing fails
 	}
 
-	private List<AccidentCaseData> parseResponse(int pageNo, int numOfRows) {
-		String encodedBusiness = URLEncoder.encode("건설업", StandardCharsets.UTF_8);
-		URI uri = UriComponentsBuilder.fromUriString("https://apis.data.go.kr/B552468/disaster_api01/getdisaster_api")
-			.queryParam("serviceKey", accidentCaseProperties.getApiKey())
-			.queryParam("pageNo", pageNo)
-			.queryParam("numOfRows", numOfRows)
-			.queryParam("business", encodedBusiness)  // You may want to parameterize this
-			.build(true)
-			.encode(StandardCharsets.UTF_8)
-			.toUri();
-
-		AccidentCaseResponse response = restTemplate.getForObject(uri, AccidentCaseResponse.class);
-
-		if (response != null && response.getBody() != null && response.getBody().getItems() != null) {
-			return response.getBody().getItems().getItem().stream()
-				.map(item -> new AccidentCaseData(normalizeText(item.getKeyword() + item.getContents()),
-					item.getBoardno(), item.getKeyword())).toList();
+	private List<AccidentCaseData> parseAccidentCaseData(int pageNo, int numOfRows) {
+		List<AccidentCaseResponse.Item> response = apiUtils.parseAccidentCaseResponse(pageNo, numOfRows);
+		if (response.isEmpty()) {
+			return List.of();
 		}
-		return List.of();
+		return response.stream().map(item -> new AccidentCaseData(normalizeText(item.getKeyword() + item.getContents()), item.getBoardno(), item.getKeyword()))
+				.toList();
 	}
 
     private List<float[]> getEmbeddedString(List<String> originMessages) {
-		EmbeddingsResult result = client.embed(originMessages, null, null, null, "text-embedding-3-large", null);
+		EmbeddingsResult result = embeddingsClient.embed(originMessages, null, null, null, "text-embedding-3-large", null);
     	return  result.getData().stream().map(embedding -> {
 				Float[] floatArray = embedding.getEmbeddingList().toArray(new Float[0]);
 				float[] primitiveArray = new float[floatArray.length];
@@ -196,8 +183,7 @@ public class AccidentCaseService {
 					primitiveArray[i] = floatArray[i]; // 언박싱
 				}
 				return primitiveArray;
-			})
-			.toList();
+			}).toList();
     }
 
 	private void saveData(List<AccidentCase> data, List<float[]> embedding) {
@@ -230,7 +216,8 @@ public class AccidentCaseService {
 			} else if (it.sender() == SenderType.BOT) {
 				return new ChatRequestAssistantMessage(it.text());
 			} else {
-				throw new IllegalArgumentException("Invalid sender type: " + it.sender());
+				log.error("존재하지 않는 SendType");
+				throw new BaseException(INVALID_REQUEST);
 			}
 		}).toList();
 		chatMessages.addAll(chatRequestMessageList);
@@ -242,20 +229,33 @@ public class AccidentCaseService {
 	}
 
 	private String getKeyword(String question, String ip) {
-		ChatCompletionsClient client = new ChatCompletionsClientBuilder()
-			.credential(new AzureKeyCredential(githubProperties.getToken()))
-			.endpoint(END_POINT)
-			.buildClient();
-
 		ArrayList<ChatRequestMessage> chatMessages = new ArrayList<>();
 		chatMessages.add(new ChatRequestSystemMessage(GET_KEYWORD_PROMPT));
 		chatMessages.add(new ChatRequestUserMessage(question));
 
 		ChatCompletionsOptions chatCompletionsOptions = new ChatCompletionsOptions(chatMessages);
-		chatCompletionsOptions.setModel(MODELS.get(Math.abs(ip.hashCode()) % MODELS.size()));
+		int modelIndex = Math.abs(ip.hashCode()) % MODELS.size();
+		ChatCompletions completions = getChatComplete(modelIndex,chatCompletionsOptions,0);
+		if (completions == null) {
+			log.error("모델 선택 에러");
+			throw new BaseException(INTERNAL_SERVER_ERROR);
+		}
 
-		ChatCompletions completions = client.complete(chatCompletionsOptions);
 		return completions.getChoices().getFirst().getMessage().getContent();
+	}
+
+	private ChatCompletions getChatComplete(int modelIndex, ChatCompletionsOptions chatCompletionsOptions, int retryCount) {
+		chatCompletionsOptions.setModel(MODELS.get(modelIndex));
+		try {
+			return chatCompletionsClient.complete(chatCompletionsOptions);
+		} catch (Exception e) {
+			log.error("모델 선택 에러 : {}", e.getMessage());
+			if (retryCount==3){
+				throw new BaseException(RETRIES_EXCEEDED_ERROR);
+			}
+			getChatComplete(modelIndex%MODELS.size(), chatCompletionsOptions, retryCount+1);
+		}
+		return null;
 	}
 
 	private final String PROMPT = String.join("\n",
