@@ -5,13 +5,18 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import com.example.jimichae.config.AccidentCaseProperties;
+import com.example.jimichae.config.KakaoApiProperties;
 import com.example.jimichae.dto.response.AccidentCaseAttachResponse;
 import com.example.jimichae.dto.response.AccidentCaseResponse;
+import com.example.jimichae.dto.response.api.KakaoMapGetPointApiResponse;
 import com.example.jimichae.exception.BaseException;
 import com.example.jimichae.exception.ErrorCode;
 
@@ -19,9 +24,11 @@ import com.example.jimichae.exception.ErrorCode;
 public class ApiUtils {
 	private final RestTemplate restTemplate = new RestTemplate();
 	private final AccidentCaseProperties accidentCaseProperties;
+	private final KakaoApiProperties kakaoApiProperties;
 
-	public ApiUtils(AccidentCaseProperties accidentCaseProperties) {
+	public ApiUtils(AccidentCaseProperties accidentCaseProperties, KakaoApiProperties kakaoApiProperties) {
 		this.accidentCaseProperties = accidentCaseProperties;
+		this.kakaoApiProperties = kakaoApiProperties;
 	}
 
 	public List<AccidentCaseResponse.Item> parseAccidentCaseResponse(int pageNo, int numOfRows) {
@@ -62,6 +69,29 @@ public class ApiUtils {
 			return List.of();
 		} catch (Exception e) {
 			throw new BaseException(ErrorCode.REST_CLIENT_ERROR, e.getMessage());
+		}
+	}
+
+	public Double[]  getPoint(String address) {
+		String encodedAddress = URLEncoder.encode(address, StandardCharsets.UTF_8);
+		HttpHeaders headers = new HttpHeaders();
+		headers.set("Authorization", "KakaoAK " + kakaoApiProperties.getRestApiKey());
+		HttpEntity<String> entity = new HttpEntity<>(headers);
+		URI uri = UriComponentsBuilder.fromUriString("https://dapi.kakao.com/v2/local/search/address.json")
+			.queryParam("query", encodedAddress)
+			.queryParam("size", 1)
+			.build(true)
+			.encode(StandardCharsets.UTF_8)
+			.toUri();
+
+		KakaoMapGetPointApiResponse response = restTemplate.exchange(uri, HttpMethod.GET, entity, KakaoMapGetPointApiResponse.class).getBody();
+
+		if (response!=null && response.getDocuments().length > 0) {
+			KakaoMapGetPointApiResponse.Document document = response.getDocuments()[0];
+			return new Double[]{Double.parseDouble(document.getX()), Double.parseDouble(document.getY())};
+		} else {
+			System.out.println(address+" : 주소를 찾을 수 없습니다.");
+			return new Double[]{0.0, 0.0};
 		}
 	}
 }

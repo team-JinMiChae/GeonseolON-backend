@@ -10,10 +10,14 @@ import jakarta.persistence.Id;
 import jakarta.persistence.SequenceGenerator;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Getter
+@Setter
 @AllArgsConstructor
+@RequiredArgsConstructor
 @SequenceGenerator(name = "institution_seq", sequenceName = "institution_seq", allocationSize = 1, initialValue = 1)
 public class Institution {
 	@Id
@@ -23,13 +27,24 @@ public class Institution {
 	@Column(nullable = false)
 	String name;
 
-	@Column(nullable = false, columnDefinition = "geometry(Point, 4326)")
+	@Column(columnDefinition = "SDO_GEOMETRY", nullable = false)
 	Point geom;
 
+	@Column(nullable = false)
 	String phoneNumber;
 
-	//TODO : 속성 더 추가하기
-	public Institution() {
-		this(null, "", null,""); // TODO: null값이 맞나?
-	}
+	@Column(nullable = false)
+	String faxNumber;
+
+	@Column(nullable = false)
+	String postalCode;
+
+	@Column(nullable = false)
+	String address;
+
+	@Column(nullable = false)
+	String region;
+
+	@Column(nullable = false, unique = true)
+	int registrationNumber;
 }

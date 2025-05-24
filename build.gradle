@@ -76,7 +76,12 @@ dependencies {
     implementation 'org.redisson:redisson-spring-boot-starter:3.46.0'
 
     // Swagger
-    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.8'
+
+    // Excel Parser
+    implementation 'org.apache.poi:poi-ooxml:5.2.3'
+
+    implementation 'com.fasterxml.jackson.core:jackson-databind' // JSON 직렬화/역직렬화를 위한 라이브러리
 }
 
 tasks.named('test') {

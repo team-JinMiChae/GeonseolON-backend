@@ -38,11 +38,8 @@ public enum ErrorCode{
 	REST_CLIENT_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, -11001, "외부 API 호출 중 에러 발생"),
 	RETRIES_EXCEEDED_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, -11002, "외부 API 호출 재시도 횟수 초과"),
 
-
-	SEARCH_KEYWORD_LENGTH(HttpStatus.BAD_REQUEST, -11000, "검색어는 1자 이상 60자 이하로 입력해주세요."),
-	RADIUS_SIZE_TOO_SMALL(HttpStatus.BAD_REQUEST, -11000, "검색 반경은 500m 이상 4000m 이하로 입력해주세요."),
-	INVALID_POINT_TO_ADDRESS(HttpStatus.BAD_REQUEST, -11000, "좌표를 주소로 변환할 수 없습니다."),
-	POPULAR_SEARCHES_NOT_FOUND(HttpStatus.NOT_FOUND, -11003, "인기 검색어가 존재하지 않습니다."),
+	// Institution API error 11000대
+	INVALID_ADDRESS_TO_POINT(HttpStatus.BAD_REQUEST, -11000, "주소를 Point로 변환할 수 없습니다."),
 
 	// Report API error 13000대
 	INVALID_LENGTH_FOOD_SPOTS_NAME(
