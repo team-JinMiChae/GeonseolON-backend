@@ -8,7 +8,6 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,7 +27,6 @@ import com.example.jimichae.util.Constants;
 @Service
 public class InstitutionService {
 	private final InstitutionRepository institutionRepository;
-	private final GeometryFactory geometryFactory = new GeometryFactory();
 	private final ApiUtils apiUtils;
 	private static final Logger log = LoggerFactory.getLogger(InstitutionService.class);
 
