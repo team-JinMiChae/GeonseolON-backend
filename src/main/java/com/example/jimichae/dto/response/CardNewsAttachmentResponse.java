@@ -4,6 +4,5 @@ import lombok.Builder;
 
 @Builder
 public record CardNewsAttachmentResponse(
-	String fileUrl,
-	String fileName
+	String fileUrl
 ){}

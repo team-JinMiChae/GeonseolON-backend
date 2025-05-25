@@ -29,9 +29,9 @@ public class CardNewsService {
 		List<CardNewsResponse> cardNewsResponseList = accidentCaseList.stream()
 			.map(item -> {
 				List<AccidentCaseAttachResponse.Item> accidentCaseAttachList = apiUtils.parseAccidentCaseAttachResponse(item.getBoardno());
-				List<CardNewsAttachmentResponse> attachmentResponses =accidentCaseAttachList.stream().map(it->new CardNewsAttachmentResponse(it.getFilepath(), it.getFilenm())).toList();
+				List<CardNewsAttachmentResponse> attachmentResponses =accidentCaseAttachList.stream().map(it->new CardNewsAttachmentResponse(it.getFilepath())).toList();
 				if (!attachmentResponses.isEmpty()){
-					return new CardNewsResponse(item.getKeyword(), item.getBoardno(), attachmentResponses);
+					return new CardNewsResponse(item.getKeyword(), item.getBoardno(), attachmentResponses, item.getContents());
 				}else {
 					return null;
 				}
