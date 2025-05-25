@@ -8,7 +8,6 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -68,7 +67,7 @@ public class WeatherGuideService {
 			LocalDateTime nowDateTime = LocalDateTime.parse(baseDateTime.baseDate() + baseDateTime.baseTime(), formatter);
 			Map<String,Map<String,String>> map = response.getResponse().getBody().getItems().getItem().stream().filter(item -> {
 				LocalDateTime fcstDateTime = LocalDateTime.parse(item.getFcstDate() + item.getFcstTime(), formatter);
-				return !fcstDateTime.isBefore(koreaDateTime.withMinute(0).withSecond(0).withNano(0)) && fcstDateTime.isBefore(nowDateTime.plusHours(4).plusMinutes(30));
+				return !fcstDateTime.isBefore(koreaDateTime.withMinute(0).withSecond(0).minusMinutes(1)) && fcstDateTime.isBefore(nowDateTime.plusHours(4).plusMinutes(30));
 			})
 				.collect(Collectors.groupingBy(
 					item -> item.getFcstDate() + " " + item.getFcstTime(),
@@ -88,13 +87,19 @@ public class WeatherGuideService {
 					Map<String, String> timeMap = entry.getValue();
 					return getWeatherInfoResponse(entry.getKey(), timeMap, tmxAndTmn);
 				})
-				.sorted(Comparator.comparing(WeatherInfoResponse::getFcstTime))
 				.toList();
 
+			WeatherInfoResponse weatherInfoResponse = list.getFirst();
 			for (WeatherInfoResponse it : list) {
+				if (it.getFcstTime().equals(onTime)){
+					weatherInfoResponse = it;
+				}
+				if (it.getType() == WeatherType.NO_DATA) {
+					break;
+				}
 				weatherGuideCacheRepository.saveWeatherInfo(it.getFcstDate(), it.getFcstTime(), regionName, it);
 			}
-			return list.getFirst();
+			return weatherInfoResponse;
 		}
 
 		return WeatherInfoResponse.builder().fcstTime(koreaDateTime.withMinute(0).format(DateTimeFormatter.ofPattern("HHmm")))
@@ -107,17 +112,17 @@ public class WeatherGuideService {
 
 		int currentHour = koreaDateTime.minusMinutes(10).getHour();
 		int targetHour = -1;
-		for (int i = times.size() - 1; i >= 0; i--) {
-			if (currentHour > times.get(i)) {
-				targetHour = times.get(i);
-				break;
-			}
-		}
-
 		LocalDate targetDate = koreaDateTime.toLocalDate();
-		if (currentHour <= 2 || targetHour == -1) {
+		if (currentHour <= 2) {
 			targetHour = 23;
 			targetDate = targetDate.minusDays(1);
+		}else {
+			for (int i = times.size() - 1; i >= 0; i--) {
+				if (currentHour > times.get(i)) {
+					targetHour = times.get(i);
+					break;
+				}
+			}
 		}
 
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
@@ -166,116 +171,110 @@ public class WeatherGuideService {
 	}
 
 	private String getContents(WeatherType type, Map<String, String> timeMap) {
-				StringBuilder advice = new StringBuilder("오늘의 작업 현장 날씨 안내\n\n");
+	    StringBuilder advice = new StringBuilder();
 
-				String pcp = timeMap.getOrDefault(WeatherCategory.PCP.name(), null);
-				String sno = timeMap.getOrDefault(WeatherCategory.SNO.name(), null);
-				String tmp = timeMap.getOrDefault(WeatherCategory.TMP.name(), null);
-				String reh = timeMap.getOrDefault(WeatherCategory.REH.name(), null);
-				String wsd = timeMap.getOrDefault(WeatherCategory.WSD.name(), null);
+	    String pcp = timeMap.getOrDefault(WeatherCategory.PCP.name(), null); // 강수량
+	    String sno = timeMap.getOrDefault(WeatherCategory.SNO.name(), null); // 적설량
+	    String tmp = timeMap.getOrDefault(WeatherCategory.TMP.name(), null); // 기온
+	    String reh = timeMap.getOrDefault(WeatherCategory.REH.name(), null); // 습도
+	    String wsd = timeMap.getOrDefault(WeatherCategory.WSD.name(), null); // 풍속
 
-				// 하늘 상태
-				switch (type) {
-					case WeatherType.RAIN: {
-						advice.append(String.format("🌧️ 비가 내리며, 시간당 강수량은 %s입니다.", pcp));
-						advice.append("미끄럼 사고와 감전 위험에 유의하세요.\n");
-						break;
-					}
-					case WeatherType.SNOWY: {
-						advice.append(String.format("❄️ 눈이 %s 내릴 예정입니다.", sno));
-						advice.append("제설 작업 및 미끄럼 사고 예방 조치가 필요합니다.\n");
-						break;
-					}
-					case WeatherType.LIGHTNING:
-						advice.append("⚡️천둥번개가 동반된 날씨입니다.");
-						advice.append("야외 고소 작업과 전기 작업은 최대한 피해주세요.\n");
-						break;
-					case WeatherType.WIND:
-						advice.append(String.format("💨 강한 바람이 불고 있습니다 (풍속 %sm/s).", wsd));
-						advice.append("고소 장비나 크레인 사용 전 안전 점검이 필요합니다.\n");
-						break;
-					case WeatherType.CLEAR_DAY:
-						advice.append("☀️ 맑고 쾌청한 날씨입니다.\n");
-						break;
-					case WeatherType.CLOUDY:
-						advice.append("☁️ 흐린 날씨로 시야 확보에 주의가 필요합니다.\n");
-						break;
-					case WeatherType.RAIN_SNOW:
-						advice.append(String.format("🌨️ 비와 눈이 섞여 내릴 예정입니다 (강수량 %s, 신적설 %s).", pcp, sno));
-						advice.append("바닥 미끄럼과 기계 결빙 모두에 대비해야 합니다.\n");
-						break;
-					case WeatherType.HOT:
-						advice.append("🔥 무더운 날씨입니다.\n");
-						break;
-				}
+	    switch (type) {
+	        case WeatherType.RAIN: {
+	            advice.append(String.format("🌧️ 비가 내리고 있습니다. 시간당 강수량은 %smm입니다. 미끄럼 사고와 감전 위험에 각별히 주의하세요.", pcp != null ? pcp : "정보 없음"));
+	            break;
+	        }
+	        case WeatherType.SNOWY: {
+	            advice.append(String.format("❄️ 눈이 내릴 예정입니다. 신적설은 %scm입니다. 제설 작업과 미끄럼 사고 예방에 신경 써주세요.", sno != null ? sno : "정보 없음"));
+	            break;
+	        }
+	        case WeatherType.LIGHTNING:
+	            advice.append("⚡️ 천둥번개가 동반된 날씨입니다. 야외 고소 작업과 전기 작업은 반드시 피하시고, 안전한 장소에서 대기하세요.");
+	            break;
+	        case WeatherType.WIND:
+	            advice.append(String.format("💨 강한 바람이 불고 있습니다. 풍속은 %sm/s입니다. 고소 장비나 크레인 사용 전 반드시 안전 점검을 실시하세요.", wsd != null ? wsd : "정보 없음"));
+	            break;
+	        case WeatherType.CLEAR_DAY:
+	            advice.append("☀️ 맑고 쾌청한 날씨입니다.");
+	            break;
+	        case WeatherType.CLOUDY:
+	            advice.append("☁️ 흐린 날씨로 시야 확보에 유의하세요.");
+	            break;
+	        case WeatherType.RAIN_SNOW:
+	            advice.append(String.format("🌨️ 비와 눈이 섞여 내릴 예정입니다. 강수량은 %smm, 신적설은 %scm입니다. 바닥 미끄럼과 기계 결빙 모두에 대비하세요.", pcp != null ? pcp : "정보 없음", sno != null ? sno : "정보 없음"));
+	            break;
+	        case WeatherType.HOT:
+	            advice.append(String.format("🔥 무더운 날씨입니다. 최고기온은 %s℃입니다. 열사병 예방을 위해 그늘에서 충분히 휴식하고, 수분을 자주 섭취하세요.", tmp != null ? tmp : "정보 없음"));
+	            break;
+	        case WeatherType.NO_DATA:
+	            advice.append("기상 데이터가 없습니다. 현장 상황을 직접 확인하고 안전에 유의하세요.");
+	            break;
+	    }
 
-				// 기온
-				if (tmp!=null) {
-					double newTmp = Double.parseDouble(tmp);
-					if (newTmp >= 30) {
-						advice.append(String.format("🌡️ 현재 기온은 %s℃로 매우 덥습니다.\n", tmp));
-						advice.append("열사병 예방을 위해 그늘 휴식과 수분 섭취를 잊지 마세요.\n");
-					} else if (newTmp <= 0) {
-						advice.append(String.format("🌡️ 현재 기온은 %s℃로 매우 춥습니다.\n", tmp));
-						advice.append("방한복 착용 및 장비 결빙 여부를 확인하세요.\n");
-					}
-				}
+	    if (tmp != null) {
+	        double newTmp = Double.parseDouble(tmp);
+	        if (newTmp >= 30) {
+	            advice.append(String.format(" 현재 기온은 %s℃로 매우 덥습니다. 열사병 예방을 위해 그늘에서 충분히 휴식하고, 수분을 자주 섭취하세요.", tmp));
+	        } else if (newTmp <= 0) {
+	            advice.append(String.format(" 현재 기온은 %s℃로 매우 춥습니다. 방한복 착용과 장비 결빙 여부를 꼭 확인하세요.", tmp));
+	        } else {
+	            advice.append(String.format(" 현재 기온은 %s℃입니다.", tmp));
+	        }
+	    }
 
-				// 습도
-				if (reh!=null){
-					double newReh = Double.parseDouble(reh);
-					if (newReh >= 80) {
-						advice.append(String.format("💧 현재 습도는 %s%%로 매우 높습니다.\n", reh));
-						advice.append("습기와 결로로 인한 장비 결빙에 주의하세요.\n");
-					} else if (newReh <= 30) {
-						advice.append(String.format("💧 현재 습도는 %s%%로 매우 낮습니다.\n", reh));
-						advice.append("정전기 발생에 주의하세요.\n");
-					}
-				}
+	    if (reh != null) {
+	        double newReh = Double.parseDouble(reh);
+	        if (newReh >= 80) {
+	            advice.append(String.format(" 습도는 %s%%로 매우 높으니, 습기와 결로로 인한 장비 결빙에 주의하세요.", reh));
+	        } else if (newReh <= 30) {
+	            advice.append(String.format(" 습도는 %s%%로 매우 낮으니, 정전기 발생에 주의하세요.", reh));
+	        } else {
+	            advice.append(String.format(" 습도는 %s%%입니다.", reh));
+	        }
+	    }
 
-				if (wsd!=null){
-					double newWsd = Double.parseDouble(wsd);
-					if (type!=WeatherType.WIND&&newWsd >= 4.0) {
-						advice.append(String.format("🌬️ 바람이 매우 강하게 붑니다 (%sm/s). 낙하물 및 비산물 사고에 주의하세요.\n", wsd));
-					}
-				}
+	    if (wsd != null && type != WeatherType.WIND ) {
+	        double newWsd = Double.parseDouble(wsd);
+	        if (newWsd >= 4.0) {
+	            advice.append(String.format(" 바람이 강하게 붑니다(풍속: %sm/s). 낙하물 및 비산물 사고에 각별히 주의하세요.", wsd));
+	        }
+	    }
 
-				advice.append("\n⛑️ 오늘도 안전한 작업 되시길 바랍니다. 장비 점검과 작업 전 교육을 잊지 마세요.\n");
-
-				return advice.toString();
-			}
-
-			private String[] getTmxAndTmn(LocalDateTime dateTime, LatXLngY latXLngY) {
-				String encodedDataType = URLEncoder.encode("JSON", StandardCharsets.UTF_8);
-				String baseDate = dateTime.minusDays(1).format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-				URI uri = UriComponentsBuilder.fromUriString("https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst")
-					.queryParam("serviceKey", weatherGuideProperties.getApiKey())
-					.queryParam("pageNo", 1)
-					.queryParam("numOfRows", 15*16)
-					.queryParam("dataType", encodedDataType)
-					.queryParam("base_date", URLEncoder.encode(baseDate, StandardCharsets.UTF_8))
-					.queryParam("base_time", URLEncoder.encode("2300", StandardCharsets.UTF_8))
-					.queryParam("nx", latXLngY.x)
-					.queryParam("ny", latXLngY.y)
-					.build(true)
-					.encode(StandardCharsets.UTF_8)
-					.toUri();
-
-				WeatherApiResponse response = restTemplate.getForObject(uri, WeatherApiResponse.class);
-
-				if (response!=null&&response.getResponse() != null && response.getResponse().getBody() != null && response.getResponse().getBody().getItems() != null) {
-					Map<String,Map<String,String>> map = response.getResponse().getBody().getItems().getItem().stream().collect(Collectors.groupingBy(
-							WeatherApiResponse.Item::getFcstTime,
-							Collectors.toMap(
-								WeatherApiResponse.Item::getCategory,
-								WeatherApiResponse.Item::getFcstValue
-							)
-						));
-					String tmn = map.get("0600").get(WeatherCategory.TMN.name());
-					String tmx = map.get("1500").get(WeatherCategory.TMX.name());
-
-					return new String[]{tmx,tmn};
-			}
-				return new String[]{null,null};
-			}
+	    advice.append(" 오늘도 안전을 최우선으로 생각하며, 장비 점검과 작업 전 안전 교육을 꼭 실시하시기 바랍니다.");
+	    return advice.toString();
 	}
+
+	private String[] getTmxAndTmn(LocalDateTime dateTime, LatXLngY latXLngY) {
+		String encodedDataType = URLEncoder.encode("JSON", StandardCharsets.UTF_8);
+		String baseDate = dateTime.minusDays(1).format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+		URI uri = UriComponentsBuilder.fromUriString("https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst")
+			.queryParam("serviceKey", weatherGuideProperties.getApiKey())
+			.queryParam("pageNo", 1)
+			.queryParam("numOfRows", 15*16)
+			.queryParam("dataType", encodedDataType)
+			.queryParam("base_date", URLEncoder.encode(baseDate, StandardCharsets.UTF_8))
+			.queryParam("base_time", URLEncoder.encode("2300", StandardCharsets.UTF_8))
+			.queryParam("nx", latXLngY.x)
+			.queryParam("ny", latXLngY.y)
+			.build(true)
+			.encode(StandardCharsets.UTF_8)
+			.toUri();
+
+		WeatherApiResponse response = restTemplate.getForObject(uri, WeatherApiResponse.class);
+
+		if (response!=null&&response.getResponse() != null && response.getResponse().getBody() != null && response.getResponse().getBody().getItems() != null) {
+			Map<String,Map<String,String>> map = response.getResponse().getBody().getItems().getItem().stream().collect(Collectors.groupingBy(
+					WeatherApiResponse.Item::getFcstTime,
+					Collectors.toMap(
+						WeatherApiResponse.Item::getCategory,
+						WeatherApiResponse.Item::getFcstValue
+					)
+				));
+			String tmn = map.get("0600").get(WeatherCategory.TMN.name());
+			String tmx = map.get("1500").get(WeatherCategory.TMX.name());
+
+			return new String[]{tmx,tmn};
+		}
+		return new String[]{null,null};
+	}
+}
