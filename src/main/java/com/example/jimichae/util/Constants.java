@@ -1,5 +1,7 @@
 package com.example.jimichae.util;
 
+import java.util.List;
+
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
@@ -13,4 +15,8 @@ public class Constants {
 		point.setSRID(Constants.SRID_WGS84);
 		return point;
 	}
+
+	public static List<String> NO_CLIENT_URLS = List.of(
+		"/api/v1/institution/save"
+	);
 }
