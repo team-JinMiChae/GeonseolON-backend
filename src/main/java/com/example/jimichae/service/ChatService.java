@@ -42,9 +42,9 @@ import jakarta.persistence.EntityManager;
 import jakarta.servlet.http.HttpServletRequest;
 
 @Service
-public class AccidentCaseService {
+public class ChatService {
 
-	private final Logger log =LoggerFactory.getLogger(AccidentCaseService.class);
+	private final Logger log =LoggerFactory.getLogger(ChatService.class);
 	private final GithubProperties githubProperties;
 	private final AccidentCaseRepository accidentCaseRepository;
 	private final AccidentCaseCacheRepository accidentCaseCacheRepository;
@@ -63,7 +63,7 @@ public class AccidentCaseService {
 	);
 	private ApiUtils apiUtils;
 
-	public AccidentCaseService(AccidentCaseProperties accidentCaseProperties, GithubProperties githubProperties,
+	public ChatService(AccidentCaseProperties accidentCaseProperties, GithubProperties githubProperties,
 		AccidentCaseRepository accidentCaseRepository, AccidentCaseCacheRepository accidentCaseCacheRepository,
 		EntityManager em) {
 		this.githubProperties = githubProperties;
@@ -81,7 +81,11 @@ public class AccidentCaseService {
 	}
 
 	// @Scheduled(cron = "0 0 5 * * *") TODO : 주석 풀기
-	public void saveAccidentCase(int pageNo) {
+	public void saveAccidentCase(int pageNo, String password) {
+		if (password==null||!password.equals("jinmichae_save_accident_case")) {
+			log.error("비밀번호가 틀렸습니다.");
+			throw new BaseException(NOT_CLIENT_USED);
+		}
 		int numOfRows = 50;
 		int newPage = -1;
 		try {

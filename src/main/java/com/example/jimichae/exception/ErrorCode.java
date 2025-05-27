@@ -41,28 +41,8 @@ public enum ErrorCode{
 	// Institution API error 11000대
 	INVALID_ADDRESS_TO_POINT(HttpStatus.BAD_REQUEST, -11000, "주소를 Point로 변환할 수 없습니다."),
 
-	// Report API error 13000대
-	INVALID_LENGTH_FOOD_SPOTS_NAME(
-		HttpStatus.BAD_REQUEST,
-		-13000,
-		"상호명은 1자 이상 20자 이하 한글, 영문, 숫자, 특수문자 여야 합니다."
-		),
-	INVALID_CHARACTERS_FOOD_SPOTS_NAME(
-		HttpStatus.BAD_REQUEST,
-		-13000,
-		"설명은 1자 이상 100자 이하로 입력해주세요."
-		),
-	NO_CATEGORY_SELECTED(HttpStatus.BAD_REQUEST, -13000, "음식 카테고리는 최소 1개 이상 선택해야 합니다."),
-	INVALID_FORMAT_OPERATION_HOURS(HttpStatus.BAD_REQUEST, -13000, "시간은 00:00부터 23:59까지의 형식이어야 합니다."),
-	INVALID_CHANGE_VALUE(HttpStatus.BAD_REQUEST, -13000, "변경할 값이 없습니다."),
-	NON_POSITIVE_FOOD_SPOT_ID(HttpStatus.BAD_REQUEST, -13000, "음식점 ID는 양수여야 합니다."),
-	NON_POSITIVE_FOOD_SPOTS_HISTORIES_ID(HttpStatus.BAD_REQUEST, -13000, "음식점 리포트 ID는 양수여야 합니다."),
-	NOT_FOUND_FOOD_CATEGORY(HttpStatus.NOT_FOUND, -13001, "해당 카테고리가 존재하지 않습니다."),
-	NOT_FOUND_FOOD_SPOTS_HISTORIES(HttpStatus.NOT_FOUND, -13002, "해당 음식점 리포트가 존재하지 않습니다."),
-	NOT_FOOD_SPOTS_HISTORIES_OWNER(HttpStatus.FORBIDDEN, -13003, "해당 음식점 리포트의 소유자가 아닙니다."),
-	FOOD_SPOTS_ALREADY_CLOSED(HttpStatus.CONFLICT, -13004, "이미 폐업 처리가 된 음식점입니다."),
-	TOO_MANY_REPORT_REQUESTS(HttpStatus.TOO_MANY_REQUESTS, -13005, "일일 리포트 생성 횟수를 초과하였습니다."),
-	UNAUTHORIZED_PHOTO_REMOVE(HttpStatus.FORBIDDEN, -13006, "사진을 삭제할 권한이 없습니다.");
+	// ChatAPI error 12000대
+	NOT_CLIENT_USED(HttpStatus.FORBIDDEN, -12001, "클라이언트에서 사용하지 않는 API입니다.");
 
 	private final HttpStatus httpStatus;
 	private final int code;

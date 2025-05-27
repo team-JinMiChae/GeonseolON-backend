@@ -5,21 +5,22 @@ import java.util.List;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.jimichae.dto.request.chatbot.ChatRequest;
 import com.example.jimichae.dto.response.ChatResponse;
-import com.example.jimichae.service.AccidentCaseService;
+import com.example.jimichae.service.ChatService;
 
 import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/api/v1/chat")
-public class AccidentCaseController {
-    private final AccidentCaseService accidentCaseService;
+public class ChatController {
+    private final ChatService chatService;
 
-    public AccidentCaseController(AccidentCaseService accidentCaseService) {
-        this.accidentCaseService = accidentCaseService;
+    public ChatController(ChatService chatService) {
+        this.chatService = chatService;
     }
 
     @PostMapping
@@ -28,14 +29,16 @@ public class AccidentCaseController {
         List<ChatRequest> requests,
         HttpServletRequest servletRequest
     ) {
-        return accidentCaseService.getQuestion(requests, servletRequest);
+        return chatService.getQuestion(requests, servletRequest);
     }
 
-    /*@PostMapping
+    @PostMapping("/save/accident_case")
     public void saveAccidentCase(
-        @RequestParam("pageNo")
-        int pageNo
+        @RequestParam(name = "pageNo", defaultValue = "1")
+        int pageNo,
+        @RequestParam(value = "password", required = false, defaultValue = "no")
+        String password
     ) {
-        accidentCaseService.saveAccidentCase(pageNo);
-    }*/ // TODO: 빼기
+        chatService.saveAccidentCase(pageNo, password);
+    }
 }
