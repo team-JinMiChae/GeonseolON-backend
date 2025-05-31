@@ -18,7 +18,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @Getter
 @Setter
-@SequenceGenerator(name = "threat_safety_measures_seq", sequenceName = "threat_safety_measures_seq", allocationSize = 1, initialValue = 1)
+@SequenceGenerator(name = "threat_safety_measures_seq", sequenceName = "threat_safety_measures_seq", allocationSize = 1)
 public class ThreatSafetyMeasures {
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "threat_safety_measures_seq")

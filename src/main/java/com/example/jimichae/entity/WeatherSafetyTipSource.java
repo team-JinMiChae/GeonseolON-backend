@@ -14,7 +14,7 @@ import lombok.Setter;
 @Entity
 @Setter
 @Getter
-@SequenceGenerator(name = "weather_safety_tip_source_seq", sequenceName = "weather_safety_tip_source_seq", allocationSize = 1, initialValue = 1)
+@SequenceGenerator(name = "weather_safety_tip_source_seq", sequenceName = "weather_safety_tip_source_seq", allocationSize = 1)
 @AllArgsConstructor
 @NoArgsConstructor
 public class WeatherSafetyTipSource {

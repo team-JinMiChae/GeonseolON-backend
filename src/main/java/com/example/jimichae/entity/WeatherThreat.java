@@ -13,7 +13,7 @@ import lombok.Setter;
 @Entity
 @Setter
 @Getter
-@SequenceGenerator(name = "weather_threat_seq", sequenceName = "weather_threat_seq", allocationSize = 1, initialValue = 1)
+@SequenceGenerator(name = "weather_threat_seq", sequenceName = "weather_threat_seq", allocationSize = 1)
 @AllArgsConstructor
 @NoArgsConstructor
 public class WeatherThreat {

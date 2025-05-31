@@ -172,19 +172,14 @@ public class WeatherGuideService {
 			.type(weatherDetailRequest.type())
 			.build());
 
-		sources.forEach(source -> {
-				weatherSafetyTipSourceRepository.save(new WeatherSafetyTipSource(null, weatherSafetyTip, source));
-		});
+		sources.forEach(source -> weatherSafetyTipSourceRepository.save(new WeatherSafetyTipSource(null, weatherSafetyTip, source)));
 
-		threats.forEach(threat -> {
-			weatherThreatRepository.save(new WeatherThreat(null, weatherSafetyTip, threat));
-		});
+		threats.forEach(threat -> weatherThreatRepository.save(new WeatherThreat(null, weatherSafetyTip, threat)));
 
 		if (weatherDetailRequest.weatherSafetyMeasures() != null) {
 			List<String> weatherSafetyMeasures = getMeasures(weatherDetailRequest.weatherSafetyMeasures());
-		weatherSafetyMeasures.forEach(safetyMeasure -> {
-			weatherSafetyMeasuresRepository.save(new WeatherSafetyMeasures(null, weatherSafetyTip, safetyMeasure));
-	});};
+		weatherSafetyMeasures.forEach(safetyMeasure -> weatherSafetyMeasuresRepository.save(new WeatherSafetyMeasures(null, weatherSafetyTip, safetyMeasure)));
+		}
 	}
 
 	private GetBaseDateTime getBaseDateTime(LocalDateTime koreaDateTime) {

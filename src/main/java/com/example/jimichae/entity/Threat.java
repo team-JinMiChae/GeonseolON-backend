@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
-@SequenceGenerator(name = "threat_seq", sequenceName = "threat_seq", allocationSize = 1, initialValue = 1)
+@SequenceGenerator(name = "threat_seq", sequenceName = "threat_seq", allocationSize = 1)
 @AllArgsConstructor
 @NoArgsConstructor
 public class Threat {

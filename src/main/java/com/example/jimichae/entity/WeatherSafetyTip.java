@@ -18,7 +18,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-@SequenceGenerator(name = "weather_safety_tips_seq", sequenceName = "weather_safety_tips_seq", allocationSize = 1, initialValue = 1)
+@SequenceGenerator(name = "weather_safety_tips_seq", sequenceName = "weather_safety_tips_seq", allocationSize = 1)
 public class WeatherSafetyTip {
 	@Id
 	@GeneratedValue(strategy= GenerationType.SEQUENCE, generator = "weather_safety_tips_seq")

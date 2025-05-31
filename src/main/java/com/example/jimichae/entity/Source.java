@@ -14,7 +14,7 @@ import lombok.Setter;
 @Entity
 @Setter
 @Getter
-@SequenceGenerator(name = "source_seq", sequenceName = "source_seq", allocationSize = 1, initialValue = 1)
+@SequenceGenerator(name = "source_seq", sequenceName = "source_seq", allocationSize = 1)
 @NoArgsConstructor
 @AllArgsConstructor
 public class Source {
@@ -22,7 +22,7 @@ public class Source {
 	@GeneratedValue(strategy= GenerationType.SEQUENCE, generator = "source_seq")
 	private Long id;
 
-	@Column(nullable = false, length = 255)
+	@Column(nullable = false)
 	private String name;
 
 	@Column(nullable = false, length = 1000)

@@ -18,7 +18,7 @@ import lombok.Setter;
 @Entity
 @Getter
 @Setter
-@SequenceGenerator(name = "accident_case_seq", sequenceName = "accident_case_seq", allocationSize = 1, initialValue = 1)
+@SequenceGenerator(name = "accident_case_seq", sequenceName = "accident_case_seq", allocationSize = 1)
 @AllArgsConstructor
 public class AccidentCase{
     @Id
