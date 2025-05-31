@@ -13,16 +13,32 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import com.example.jimichae.config.WeatherGuideProperties;
 import com.example.jimichae.dto.GetBaseDateTime;
+import com.example.jimichae.dto.request.WeatherGuide.WeatherDetailRequest;
 import com.example.jimichae.dto.response.WeatherApiResponse;
 import com.example.jimichae.dto.response.WeatherInfoResponse;
+import com.example.jimichae.entity.Source;
+import com.example.jimichae.entity.Threat;
+import com.example.jimichae.entity.ThreatSafetyMeasures;
 import com.example.jimichae.entity.WeatherCategory;
+import com.example.jimichae.entity.WeatherSafetyMeasures;
+import com.example.jimichae.entity.WeatherSafetyTip;
+import com.example.jimichae.entity.WeatherSafetyTipSource;
+import com.example.jimichae.entity.WeatherThreat;
 import com.example.jimichae.entity.WeatherType;
+import com.example.jimichae.repository.SourceRepository;
+import com.example.jimichae.repository.ThreatRepository;
+import com.example.jimichae.repository.ThreatSafetyMeasuresRepository;
 import com.example.jimichae.repository.WeatherGuideCacheRepository;
+import com.example.jimichae.repository.WeatherSafetyMeasuresRepository;
+import com.example.jimichae.repository.WeatherSafetyTipRepository;
+import com.example.jimichae.repository.WeatherSafetyTipSourceRepository;
+import com.example.jimichae.repository.WeatherThreatRepository;
 import com.example.jimichae.util.GeoUtil;
 import com.example.jimichae.util.LatXLngY;
 
@@ -31,11 +47,25 @@ public class WeatherGuideService {
 	private final WeatherGuideProperties weatherGuideProperties;
 	private final RestTemplate restTemplate = new RestTemplate();
 	private final WeatherGuideCacheRepository weatherGuideCacheRepository;
+	private final SourceRepository sourceRepository;
+	private final ThreatRepository threatRepository;
+	private final WeatherSafetyMeasuresRepository weatherSafetyMeasuresRepository;
+	private final WeatherSafetyTipRepository weatherSafetyTipRepository;
+	private final WeatherSafetyTipSourceRepository weatherSafetyTipSourceRepository;
+	private final ThreatSafetyMeasuresRepository threatSafetyMeasuresRepository;
+	private final WeatherThreatRepository weatherThreatRepository;
 	private final List<Integer> times = Arrays.asList(2, 5, 8, 11, 14, 17, 20, 23);
 
-	public WeatherGuideService(WeatherGuideProperties weatherGuideProperties, WeatherGuideCacheRepository weatherGuideCacheRepository) {
+	public WeatherGuideService(WeatherGuideProperties weatherGuideProperties, WeatherGuideCacheRepository weatherGuideCacheRepository, SourceRepository sourceRepository, ThreatRepository threatRepository, WeatherSafetyMeasuresRepository weatherSafetyMeasuresRepository, WeatherSafetyTipRepository weatherSafetyTipRepository, WeatherSafetyTipSourceRepository weatherSafetyTipSourceRepository, ThreatSafetyMeasuresRepository threatSafetyMeasuresRepository, WeatherThreatRepository weatherThreatRepository) {
 		this.weatherGuideProperties = weatherGuideProperties;
 		this.weatherGuideCacheRepository = weatherGuideCacheRepository;
+		this.sourceRepository = sourceRepository;
+		this.threatRepository = threatRepository;
+		this.weatherSafetyMeasuresRepository = weatherSafetyMeasuresRepository;
+		this.weatherSafetyTipRepository = weatherSafetyTipRepository;
+		this.weatherSafetyTipSourceRepository = weatherSafetyTipSourceRepository;
+		this.threatSafetyMeasuresRepository = threatSafetyMeasuresRepository;
+		this.weatherThreatRepository = weatherThreatRepository;
 	}
 
 	public WeatherInfoResponse getWeatherGuide(double latitude, double longitude, String regionName) {
@@ -106,6 +136,55 @@ public class WeatherGuideService {
 			.fcstDate(koreaDateTime.format(DateTimeFormatter.ofPattern("yyyyMMdd")))
 			.type(WeatherType.NO_DATA)
 			.build();
+	}
+
+	@Transactional
+	public void saveWeatherGuideDetail(WeatherDetailRequest weatherDetailRequest) {
+		List<Source> sources = List.of();
+		if (weatherDetailRequest.sources() != null) {
+			sources = weatherDetailRequest.sources().stream().map(source -> {
+				if (!sourceRepository.existsByNameAndUrl(source.name(), source.url())) {
+					return sourceRepository.save(new Source(null,source.name(), source.url()));
+				}else {
+					return sourceRepository.findByNameAndUrl(source.name(), source.url());
+				}
+			}).toList();
+		}
+
+		List<Threat> threats = List.of();
+		if (weatherDetailRequest.threatRequests() != null) {
+			threats = weatherDetailRequest.threatRequests().stream().map(threatRequest -> {
+				if (!threatRepository.existsByName(threatRequest.name())) {
+					Threat threat = threatRepository.save(new Threat(null, threatRequest.name()));
+					if (threatRequest.safetyMeasures() != null) {
+						List<String> safetyMeasures = getMeasures(threatRequest.safetyMeasures());
+						safetyMeasures.forEach(safetyMeasure -> threatSafetyMeasuresRepository.save(new ThreatSafetyMeasures(null,threat, safetyMeasure)));
+					}
+					return threat;
+				} else {
+					return threatRepository.findByName(threatRequest.name());
+				}
+			}).toList();
+		}
+		WeatherSafetyTip weatherSafetyTip = weatherSafetyTipRepository.save(WeatherSafetyTip.builder().id(null)
+			.simpleSafetyMeasures(weatherDetailRequest.simpleSafetyMeasures())
+			.detailedSafetyMeasures(weatherDetailRequest.detailedSafetyMeasures())
+			.type(weatherDetailRequest.type())
+			.build());
+
+		sources.forEach(source -> {
+				weatherSafetyTipSourceRepository.save(new WeatherSafetyTipSource(null, weatherSafetyTip, source));
+		});
+
+		threats.forEach(threat -> {
+			weatherThreatRepository.save(new WeatherThreat(null, weatherSafetyTip, threat));
+		});
+
+		if (weatherDetailRequest.weatherSafetyMeasures() != null) {
+			List<String> weatherSafetyMeasures = getMeasures(weatherDetailRequest.weatherSafetyMeasures());
+		weatherSafetyMeasures.forEach(safetyMeasure -> {
+			weatherSafetyMeasuresRepository.save(new WeatherSafetyMeasures(null, weatherSafetyTip, safetyMeasure));
+	});};
 	}
 
 	private GetBaseDateTime getBaseDateTime(LocalDateTime koreaDateTime) {
@@ -276,5 +355,9 @@ public class WeatherGuideService {
 			return new String[]{tmx,tmn};
 		}
 		return new String[]{null,null};
+	}
+
+	private List<String> getMeasures(String safetyMeasures) {
+		return Arrays.stream(safetyMeasures.split("\n")).filter(s -> !s.isBlank()).toList();
 	}
 }

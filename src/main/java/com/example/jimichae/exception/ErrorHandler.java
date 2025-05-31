@@ -54,6 +54,7 @@ public class ErrorHandler extends ResponseEntityExceptionHandler {
 		} else if (cause instanceof MismatchedInputException mismatchedEx) {
 			errorMessage = getPathJoinedMessage(mismatchedEx.getPath()) + ": " + ex.getMessage();
 		} else {
+			log.error(ex.getMessage());
 			errorMessage = "유효하지 않은 요청입니다";
 		}
 		log.error("HttpMessageNotReadableException: {}", errorMessage);
