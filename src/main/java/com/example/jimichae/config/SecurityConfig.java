@@ -30,7 +30,7 @@ public class SecurityConfig {
 	@Bean
 	public CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration corsConfig = new CorsConfiguration();
-		corsConfig.setAllowedOriginPatterns(List.of("http://localhost:8080", "http://localhost:5173","http://localhost:3000", "http://localhost:4173 ","https://geonseol-on-frontend-n5xk.vercel.app", "https://jinmichae.jayden-bin.cc", "*"));
+		corsConfig.setAllowedOriginPatterns(List.of("http://localhost:8080", "http://localhost:5173","http://localhost:3000", "http://localhost:4173","https://geonseol-on-frontend-n5xk.vercel.app", "https://jinmichae.jayden-bin.cc"));
 		corsConfig.setAllowedMethods(List.of("GET", "POST", "PATCH", "DELETE", "PUT", "OPTIONS"));
 		corsConfig.setAllowedHeaders(List.of("Authorization", "Content-Type"));
 
