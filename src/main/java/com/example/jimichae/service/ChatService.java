@@ -1,6 +1,7 @@
 package com.example.jimichae.service;
 
 import static com.example.jimichae.exception.ErrorCode.*;
+import static com.example.jimichae.service.ApiUtils.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,20 +14,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.azure.ai.inference.ChatCompletionsClient;
-import com.azure.ai.inference.ChatCompletionsClientBuilder;
-import com.azure.ai.inference.EmbeddingsClient;
-import com.azure.ai.inference.EmbeddingsClientBuilder;
 import com.azure.ai.inference.models.ChatCompletions;
 import com.azure.ai.inference.models.ChatCompletionsOptions;
 import com.azure.ai.inference.models.ChatRequestAssistantMessage;
 import com.azure.ai.inference.models.ChatRequestMessage;
 import com.azure.ai.inference.models.ChatRequestSystemMessage;
 import com.azure.ai.inference.models.ChatRequestUserMessage;
-import com.azure.ai.inference.models.EmbeddingsResult;
-import com.azure.core.credential.AzureKeyCredential;
-import com.example.jimichae.config.AccidentCaseProperties;
-import com.example.jimichae.config.GithubProperties;
 import com.example.jimichae.dto.AccidentCaseData;
 import com.example.jimichae.dto.request.chatbot.ChatRequest;
 import com.example.jimichae.dto.request.chatbot.SenderType;
@@ -38,46 +31,19 @@ import com.example.jimichae.repository.AccidentCaseCacheRepository;
 import com.example.jimichae.repository.AccidentCaseRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
-import jakarta.persistence.EntityManager;
 import jakarta.servlet.http.HttpServletRequest;
 
 @Service
 public class ChatService {
-
 	private final Logger log =LoggerFactory.getLogger(ChatService.class);
-	private final GithubProperties githubProperties;
 	private final AccidentCaseRepository accidentCaseRepository;
 	private final AccidentCaseCacheRepository accidentCaseCacheRepository;
-	private final EntityManager em;
-	private final EmbeddingsClient embeddingsClient;
-	private final ChatCompletionsClient chatCompletionsClient;
-	private final String END_POINT = "https://models.inference.ai.azure.com";
-	private List<String> MODELS = List.of(
-		"gpt-4.1",
-		"gpt-4.1-mini",
-		"gpt-4.1-nano",
-		"gpt-4o",
-		"gpt-4o-mini",
-		"Llama-4-Scout-17B-16E-Instruct",
-		"Llama-4-Maverick-17B-128E-Instruct-FP8"
-	);
-	private ApiUtils apiUtils;
+	private final ApiUtils apiUtils;
 
-	public ChatService(AccidentCaseProperties accidentCaseProperties, GithubProperties githubProperties,
-		AccidentCaseRepository accidentCaseRepository, AccidentCaseCacheRepository accidentCaseCacheRepository,
-		EntityManager em) {
-		this.githubProperties = githubProperties;
+	public ChatService(AccidentCaseRepository accidentCaseRepository, AccidentCaseCacheRepository accidentCaseCacheRepository, ApiUtils apiUtils) {
 		this.accidentCaseRepository = accidentCaseRepository;
 		this.accidentCaseCacheRepository = accidentCaseCacheRepository;
-		this.em = em;
-		this.embeddingsClient = new EmbeddingsClientBuilder()
-			.credential(new AzureKeyCredential(accidentCaseProperties.getEmbeddingKey()))
-			.endpoint(accidentCaseProperties.getEmbeddingUrl())
-			.buildClient();
-		this.chatCompletionsClient = new ChatCompletionsClientBuilder()
-			.credential(new AzureKeyCredential(githubProperties.getToken()))
-			.endpoint(END_POINT)
-			.buildClient();
+		this.apiUtils = apiUtils;
 	}
 
 	// @Scheduled(cron = "0 0 5 * * *") TODO : 주석 풀기
@@ -105,7 +71,7 @@ public class ChatService {
 						List<String> originMessages = accidentCases.stream()
 							.map(AccidentCase::getOriginalText)
 							.toList();
-						saveData(accidentCases, getEmbeddedString(originMessages));
+						saveData(accidentCases, apiUtils.getEmbeddedString(originMessages));
 						log.info("성공 : {}", newPage);
 					}else {
 						count++;
@@ -129,17 +95,17 @@ public class ChatService {
 	public ChatResponse getQuestion(List<ChatRequest> requests, HttpServletRequest request) {
 		String ip = request.getRemoteAddr();
 		ChatRequest lastRequest = requests.getLast();
-		String keyword = getKeyword(lastRequest.text(), ip);
+		String keyword = apiUtils.getKeyword(lastRequest.text(), ip);
 		List<ChatRequest> ragResult;
 		if (accidentCaseCacheRepository.existsByKeyword(keyword)) {
 			try {
 				ragResult = accidentCaseCacheRepository.findByKeyword(keyword);
 			} catch (JsonProcessingException e) {
-				ragResult = getRagResult(keyword);
+				ragResult = apiUtils.getRagResult(keyword);
 				accidentCaseCacheRepository.save(keyword, ragResult);
 			}
 		} else {
-			ragResult = getRagResult(keyword);
+			ragResult = apiUtils.getRagResult(keyword);
 			accidentCaseCacheRepository.save(keyword, ragResult);
 		}
 		requests.removeLast();
@@ -178,18 +144,6 @@ public class ChatService {
 				.toList();
 	}
 
-    private List<float[]> getEmbeddedString(List<String> originMessages) {
-		EmbeddingsResult result = embeddingsClient.embed(originMessages, null, null, null, "text-embedding-3-large", null);
-    	return  result.getData().stream().map(embedding -> {
-				Float[] floatArray = embedding.getEmbeddingList().toArray(new Float[0]);
-				float[] primitiveArray = new float[floatArray.length];
-				for (int i = 0; i < floatArray.length; i++) {
-					primitiveArray[i] = floatArray[i]; // 언박싱
-				}
-				return primitiveArray;
-			}).toList();
-    }
-
 	private void saveData(List<AccidentCase> data, List<float[]> embedding) {
 		for (int i = 0; i < data.size(); i++) {
 			data.get(i).setTheVector(embedding.get(i));
@@ -197,21 +151,9 @@ public class ChatService {
 		accidentCaseRepository.saveAll(data);
 	}
 
-	private List<ChatRequest> getRagResult(String question) {
-		final float[] vector = getEmbeddedString(List.of(question)).getFirst();
-		return em.createQuery(
-				"select e.originalText from AccidentCase e order by cosine_distance(e.theVector, :vec) asc limit 10",
-				String.class)
-			.setParameter("vec", vector)
-			.getResultList().stream().map(result -> new ChatRequest(result, SenderType.BOT)).toList();
-	}
+
 
 	private ChatResponse getChat(List<ChatRequest> request, String ip) {
-		ChatCompletionsClient client = new ChatCompletionsClientBuilder()
-			.credential(new AzureKeyCredential(githubProperties.getToken()))
-			.endpoint(END_POINT)
-			.buildClient();
-
 		ArrayList<ChatRequestMessage> chatMessages = new ArrayList<>();
 		chatMessages.add(new ChatRequestSystemMessage(PROMPT));
 		List<ChatRequestMessage> chatRequestMessageList = request.stream().map(it -> {
@@ -226,40 +168,10 @@ public class ChatService {
 		}).toList();
 		chatMessages.addAll(chatRequestMessageList);
 		ChatCompletionsOptions chatCompletionsOptions = new ChatCompletionsOptions(chatMessages);
-		chatCompletionsOptions.setModel(MODELS.get(Math.abs(ip.hashCode()) % MODELS.size()));
+		int index = Math.abs(ip.hashCode()) % MODELS.size();
 
-		ChatCompletions completions = client.complete(chatCompletionsOptions);
+		ChatCompletions completions = apiUtils.getChatComplete(index,chatCompletionsOptions,0);
 		return new ChatResponse(completions.getChoices().getFirst().getMessage().getContent());
-	}
-
-	private String getKeyword(String question, String ip) {
-		ArrayList<ChatRequestMessage> chatMessages = new ArrayList<>();
-		chatMessages.add(new ChatRequestSystemMessage(GET_KEYWORD_PROMPT));
-		chatMessages.add(new ChatRequestUserMessage(question));
-
-		ChatCompletionsOptions chatCompletionsOptions = new ChatCompletionsOptions(chatMessages);
-		int modelIndex = Math.abs(ip.hashCode()) % MODELS.size();
-		ChatCompletions completions = getChatComplete(modelIndex,chatCompletionsOptions,0);
-		if (completions == null) {
-			log.error("모델 선택 에러");
-			throw new BaseException(INTERNAL_SERVER_ERROR);
-		}
-
-		return completions.getChoices().getFirst().getMessage().getContent();
-	}
-
-	private ChatCompletions getChatComplete(int modelIndex, ChatCompletionsOptions chatCompletionsOptions, int retryCount) {
-		chatCompletionsOptions.setModel(MODELS.get(modelIndex));
-		try {
-			return chatCompletionsClient.complete(chatCompletionsOptions);
-		} catch (Exception e) {
-			log.error("모델 선택 에러 : {}", e.getMessage());
-			if (retryCount==3){
-				throw new BaseException(RETRIES_EXCEEDED_ERROR);
-			}
-			getChatComplete(modelIndex%MODELS.size(), chatCompletionsOptions, retryCount+1);
-		}
-		return null;
 	}
 
 	private final String PROMPT = String.join("\n",
@@ -284,18 +196,5 @@ public class ChatService {
 		"19. You should proactively suggest preventive measures for common hazardous situations frequently occurring at construction sites.",
 		"20. You must deliver responses in Markdown format.",
 		"21. Since you must respond with reference to accident cases, if there are accident cases related to the user’s question, each should be summarized individually, and unrelated cases do not need to be summarized."
-	);
-
-	private final String GET_KEYWORD_PROMPT = String.join("\n",
-		"1. You are an assistant designed to support construction-related activities, providing users with assistance in summarizing accident cases.",
-		"2. You do not have a name and must not provide one, even when asked.",
-		"3. you must identify the core subject within the question and respond using a keyword that appears in the question. For example, if the question is about a fall accident, respond with the word “추락”, and if it is about a forklift, respond with “지게차”. If the keyword is not explicitly mentioned, you must infer it and provide a single, most relevant keyword.",
-		"4. You must give only one response per conversation turn.",
-		"5. Your response must consist of only the keyword. Do not include explanations, greetings, or any additional text.",
-		"6. You must carefully and accurately interpret the user's input to identify the most relevant construction-related keyword.",
-		"7. All responses must be in Korean, regardless of the language of the input.",
-		"8. You must not provide any personal information about yourself or the user.",
-		"9. You may only answer questions related to construction topics. For any unrelated question, you must respond with '해당 없음'.",
-		"10. You must deliver responses in plain text, without formatting such as JSON or Markdown."
 	);
 }
