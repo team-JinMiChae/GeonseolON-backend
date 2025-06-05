@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.jimichae.dto.request.WeatherGuide.WeatherDetailRequest;
 import com.example.jimichae.dto.response.WeatherInfoResponse;
+import com.example.jimichae.dto.response.WeatherTipResponse;
+import com.example.jimichae.entity.WeatherType;
 import com.example.jimichae.service.WeatherGuideService;
 
 @RestController
@@ -28,7 +30,7 @@ public class WeatherGuideController {
 		double longitude,
 		@RequestParam(value = "regionName")
 		String regionName
-	){
+	) {
 		return weatherGuideService.getWeatherGuide(latitude, longitude, regionName);
 	}
 
@@ -36,10 +38,18 @@ public class WeatherGuideController {
 	public void saveWeatherGuide(
 		@RequestBody
 		WeatherDetailRequest weatherDetailRequest
-	){
+	) {
 		if (weatherDetailRequest == null) {
 			throw new IllegalArgumentException("Weather detail request cannot be null");
 		}
 		weatherGuideService.saveWeatherGuideDetail(weatherDetailRequest);
+	}
+
+	@GetMapping("/detail")
+	public WeatherTipResponse getWeatherDetail(
+		@RequestParam("weatherType")
+		WeatherType weatherType
+	) {
+		return weatherGuideService.getWeatherTip(weatherType);
 	}
 }
