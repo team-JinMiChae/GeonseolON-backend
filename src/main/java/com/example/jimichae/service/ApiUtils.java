@@ -31,11 +31,10 @@ import com.azure.core.credential.AzureKeyCredential;
 import com.example.jimichae.config.AccidentCaseProperties;
 import com.example.jimichae.config.GithubProperties;
 import com.example.jimichae.config.KakaoApiProperties;
-import com.example.jimichae.dto.request.chatbot.ChatRequest;
-import com.example.jimichae.dto.request.chatbot.SenderType;
 import com.example.jimichae.dto.response.AccidentCaseAttachResponse;
 import com.example.jimichae.dto.response.AccidentCaseResponse;
 import com.example.jimichae.dto.response.api.KakaoMapGetPointApiResponse;
+import com.example.jimichae.entity.AccidentCase;
 import com.example.jimichae.exception.BaseException;
 import com.example.jimichae.exception.ErrorCode;
 
@@ -139,13 +138,13 @@ public class ApiUtils {
 		}
 	}
 
-	public List<ChatRequest> getRagResult(String question) {
+	public List<AccidentCase> getRagResult(String question) {
 		final float[] vector = getEmbeddedString(List.of(question)).getFirst();
 		return em.createQuery(
-				"select e.originalText from AccidentCase e order by cosine_distance(e.theVector, :vec) asc limit 10",
-				String.class)
+				"select e from AccidentCase e order by cosine_distance(e.theVector, :vec) asc limit 10",
+				AccidentCase.class)
 			.setParameter("vec", vector)
-			.getResultList().stream().map(result -> new ChatRequest(result, SenderType.BOT)).toList();
+			.getResultList();
 	}
 
 	public String getKeyword(String question, String ip) {
@@ -190,6 +189,23 @@ public class ApiUtils {
 		}).toList();
 	}
 
+	public String getSummation(String text){
+		ArrayList<ChatRequestMessage> chatMessages = new ArrayList<>();
+		if (text == null || text.isEmpty()) {
+			return null;
+		}
+		chatMessages.add(new ChatRequestSystemMessage(GET_SUMMATION_PROMPT));
+		chatMessages.add(new ChatRequestUserMessage(text));
+
+		ChatCompletionsOptions chatCompletionsOptions = new ChatCompletionsOptions(chatMessages);
+
+		ChatCompletions completions = getChatComplete(5,chatCompletionsOptions,0);
+		if (completions == null) {
+			return null;
+		}
+		return completions.getChoices().getFirst().getMessage().getContent();
+	}
+
 	private final String GET_KEYWORD_PROMPT = String.join("\n",
 		"1. You are an assistant designed to support construction-related activities, providing users with assistance in summarizing accident cases.",
 		"2. You do not have a name and must not provide one, even when asked.",
@@ -201,5 +217,15 @@ public class ApiUtils {
 		"8. You must not provide any personal information about yourself or the user.",
 		"9. You may only answer questions related to construction topics. For any unrelated question, you must respond with '해당 없음'.",
 		"10. You must deliver responses in plain text, without formatting such as JSON or Markdown."
+	);
+
+	private final String GET_SUMMATION_PROMPT = String.join("\n",
+		"1. You are an assistant designed to support construction-related activities, providing users with assistance in summarizing accident cases.",
+		"2. You must summarize the provided text in a concise manner, focusing on the key points and essential information.",
+		"3. Your summary should be clear, logical, and structured, avoiding unnecessary details or repetition.",
+		"4. You must not include personal opinions or interpretations in your summary.",
+		"5. All responses must be in Korean, regardless of the language of the input.",
+		"6. You must not provide any personal information about yourself or the user.",
+		"7. Responses must be within 200 characters."
 	);
 }

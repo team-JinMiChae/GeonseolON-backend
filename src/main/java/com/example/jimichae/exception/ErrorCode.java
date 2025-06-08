@@ -43,7 +43,8 @@ public enum ErrorCode{
 	NOT_CLIENT_USED(HttpStatus.FORBIDDEN, -12001, "클라이언트에서 사용하지 않는 API입니다."),
 
 	// Weather API error 13000대
-	WEATHER_MEASURES_NOT_FOUND(HttpStatus.NOT_FOUND, -13001, "해당 날씨에 대한 정보가 존재하지 않습니다.");
+	WEATHER_MEASURES_NOT_FOUND(HttpStatus.NOT_FOUND, -13001, "해당 날씨에 대한 정보가 존재하지 않습니다."),
+	WEATHER_THREAT_NOT_FOUND(HttpStatus.NOT_FOUND, -13002, "해당 날씨 위협에 대한 정보가 존재하지 않습니다.");
 
 	private final HttpStatus httpStatus;
 	private final int code;

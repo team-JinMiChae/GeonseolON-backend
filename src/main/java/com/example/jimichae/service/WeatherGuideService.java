@@ -24,28 +24,34 @@ import org.springframework.web.util.UriComponentsBuilder;
 import com.example.jimichae.config.WeatherGuideProperties;
 import com.example.jimichae.dto.GetBaseDateTime;
 import com.example.jimichae.dto.request.WeatherGuide.WeatherDetailRequest;
+import com.example.jimichae.dto.response.AccidentCaseAttachResponse;
 import com.example.jimichae.dto.response.WeatherApiResponse;
 import com.example.jimichae.dto.response.WeatherInfoResponse;
 import com.example.jimichae.dto.response.WeatherThreatResponse;
 import com.example.jimichae.dto.response.WeatherTipResponse;
 import com.example.jimichae.dto.response.WeatherTipSourceResponse;
+import com.example.jimichae.entity.AccidentCase;
 import com.example.jimichae.entity.Source;
 import com.example.jimichae.entity.Threat;
 import com.example.jimichae.entity.ThreatSafetyMeasures;
+import com.example.jimichae.entity.WeatherAccidentCase;
 import com.example.jimichae.entity.WeatherCategory;
 import com.example.jimichae.entity.WeatherSafetyMeasures;
 import com.example.jimichae.entity.WeatherSafetyTip;
 import com.example.jimichae.entity.WeatherSafetyTipSource;
 import com.example.jimichae.entity.WeatherThreat;
+import com.example.jimichae.entity.WeatherThreatAccidentCase;
 import com.example.jimichae.entity.WeatherType;
 import com.example.jimichae.exception.BaseException;
 import com.example.jimichae.repository.SourceRepository;
 import com.example.jimichae.repository.ThreatRepository;
 import com.example.jimichae.repository.ThreatSafetyMeasuresRepository;
+import com.example.jimichae.repository.WeatherAccidentCaseRepository;
 import com.example.jimichae.repository.WeatherGuideCacheRepository;
 import com.example.jimichae.repository.WeatherSafetyMeasuresRepository;
 import com.example.jimichae.repository.WeatherSafetyTipRepository;
 import com.example.jimichae.repository.WeatherSafetyTipSourceRepository;
+import com.example.jimichae.repository.WeatherThreatAccidentCaseRepository;
 import com.example.jimichae.repository.WeatherThreatRepository;
 import com.example.jimichae.util.GeoUtil;
 import com.example.jimichae.util.LatXLngY;
@@ -62,11 +68,13 @@ public class WeatherGuideService {
 	private final WeatherSafetyTipSourceRepository weatherSafetyTipSourceRepository;
 	private final ThreatSafetyMeasuresRepository threatSafetyMeasuresRepository;
 	private final WeatherThreatRepository weatherThreatRepository;
+	private final WeatherAccidentCaseRepository weatherAccidentCaseRepository;
+	private final WeatherThreatAccidentCaseRepository weatherThreatAccidentCaseRepository;
 	private final ApiUtils apiUtils;
-	private static final Logger log = LoggerFactory.getLogger(WeatherGuideService.class);
+	private final Logger log = LoggerFactory.getLogger(WeatherGuideService.class);
 	private final List<Integer> times = Arrays.asList(2, 5, 8, 11, 14, 17, 20, 23);
 
-	public WeatherGuideService(WeatherGuideProperties weatherGuideProperties, WeatherGuideCacheRepository weatherGuideCacheRepository, SourceRepository sourceRepository, ThreatRepository threatRepository, WeatherSafetyMeasuresRepository weatherSafetyMeasuresRepository, WeatherSafetyTipRepository weatherSafetyTipRepository, WeatherSafetyTipSourceRepository weatherSafetyTipSourceRepository, ThreatSafetyMeasuresRepository threatSafetyMeasuresRepository, WeatherThreatRepository weatherThreatRepository, ApiUtils apiUtils) {
+	public WeatherGuideService(WeatherGuideProperties weatherGuideProperties, WeatherGuideCacheRepository weatherGuideCacheRepository, SourceRepository sourceRepository, ThreatRepository threatRepository, WeatherSafetyMeasuresRepository weatherSafetyMeasuresRepository, WeatherSafetyTipRepository weatherSafetyTipRepository, WeatherSafetyTipSourceRepository weatherSafetyTipSourceRepository, ThreatSafetyMeasuresRepository threatSafetyMeasuresRepository, WeatherThreatRepository weatherThreatRepository, WeatherAccidentCaseRepository weatherAccidentCaseRepository, WeatherThreatAccidentCaseRepository weatherThreatAccidentCaseRepository,ApiUtils apiUtils) {
 		this.weatherGuideProperties = weatherGuideProperties;
 		this.weatherGuideCacheRepository = weatherGuideCacheRepository;
 		this.sourceRepository = sourceRepository;
@@ -76,6 +84,8 @@ public class WeatherGuideService {
 		this.weatherSafetyTipSourceRepository = weatherSafetyTipSourceRepository;
 		this.threatSafetyMeasuresRepository = threatSafetyMeasuresRepository;
 		this.weatherThreatRepository = weatherThreatRepository;
+		this.weatherAccidentCaseRepository = weatherAccidentCaseRepository;
+		this.weatherThreatAccidentCaseRepository = weatherThreatAccidentCaseRepository;
 		this.apiUtils = apiUtils;
 	}
 
@@ -227,6 +237,48 @@ public class WeatherGuideService {
 			.weatherThreats(weatherThreatResponses)
 			.commonMeasure(weatherSafetyMeasures)
 			.build();
+	}
+
+	@Transactional
+	public void saveWeatherAccidentCase(WeatherType weatherType) {
+		WeatherSafetyTip weatherSafetyTip = weatherSafetyTipRepository.findByType(weatherType);
+		List<WeatherThreat> weatherThreat = weatherThreatRepository.findAllByWeatherSafetyTip(weatherSafetyTip);
+		if (weatherThreat.isEmpty()) {
+			log.error("weatherThreat가 존재하지 않습니다.");
+			throw new BaseException(WEATHER_MEASURES_NOT_FOUND);
+		}
+		for (WeatherThreat threat : weatherThreat) {
+			if (threat.getWeatherSafetyTip().getType() == WeatherType.NO_DATA) {
+				log.warn("날씨 유형이 NO_DATA인 경우는 제외합니다: {}", threat.getWeatherSafetyTip().getType());
+				continue;
+			}
+			String type = threat.getWeatherSafetyTip().getType().getDescription();
+			List<AccidentCase> accidentCases = apiUtils.getRagResult(type + " " + threat.getThreat().getName() + " 사고");
+			for (AccidentCase accidentCase : accidentCases) {
+					int boardNo = accidentCase.getBoardNo();
+					WeatherAccidentCase weatherAccidentCase;
+					if (weatherAccidentCaseRepository.existsByBoardNo(boardNo)) {
+						weatherAccidentCase = weatherAccidentCaseRepository.findByBoardNo(boardNo);
+					} else {
+						//String summation = apiUtils.getSummation(accidentCase.getOriginalText());
+						String summation = String.valueOf(accidentCase.getBoardNo());
+						List<AccidentCaseAttachResponse.Item> filepath = apiUtils.parseAccidentCaseAttachResponse(boardNo);
+						if (filepath.isEmpty()) {
+							log.warn("파일 경로가 없습니다. boardNo: {}", boardNo);
+							continue;
+						}
+						weatherAccidentCase = weatherAccidentCaseRepository.save(new WeatherAccidentCase(null, boardNo, accidentCase.getKeyword(), summation, filepath.getFirst().getFilepath()));
+					}
+					if (weatherAccidentCase == null) {
+						continue;
+					}
+					if (!weatherThreatAccidentCaseRepository.existsByWeatherThreatAndWeatherAccidentCase(threat, weatherAccidentCase)) {
+						weatherThreatAccidentCaseRepository.save(
+							new WeatherThreatAccidentCase(null, threat, weatherAccidentCase));
+					}
+			}
+			log.info("날씨 유형: {}, 위협: {}, 사고 사례 저장 완료", threat.getWeatherSafetyTip().getType(), threat.getThreat().getName());
+		}
 	}
 
 	private GetBaseDateTime getBaseDateTime(LocalDateTime koreaDateTime) {

@@ -101,17 +101,20 @@ public class ChatService {
 			try {
 				ragResult = accidentCaseCacheRepository.findByKeyword(keyword);
 			} catch (JsonProcessingException e) {
-				ragResult = apiUtils.getRagResult(keyword);
+				ragResult = getChatRagResult(keyword);
 				accidentCaseCacheRepository.save(keyword, ragResult);
 			}
 		} else {
-			ragResult = apiUtils.getRagResult(keyword);
+			ragResult = getChatRagResult(keyword);
 			accidentCaseCacheRepository.save(keyword, ragResult);
 		}
 		requests.removeLast();
 		requests.addAll(ragResult);
 		requests.add(lastRequest);
 		return getChat(requests, ip);
+	}
+	private List<ChatRequest> getChatRagResult(String question) {
+		return  apiUtils.getRagResult(question).stream().map(result -> new ChatRequest(result.getOriginalText(), SenderType.BOT)).toList();
 	}
 
 	private String normalizeText(String htmlContent) {
