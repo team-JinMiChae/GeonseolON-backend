@@ -17,6 +17,6 @@ public class Constants {
 	}
 
 	public static List<String> NO_CLIENT_URLS = List.of(
-		"/api/v1/institution/save", "api/v1/weather_guide/save"
+		"/api/v1/institution/save", "/api/v1/weather_guide/save", "/api/v1/weather_guide/detail/accident/{weatherType}"
 	);
 }

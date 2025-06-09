@@ -248,6 +248,10 @@ public class WeatherGuideService {
 
 	@Transactional
 	public void saveWeatherAccidentCase(WeatherType weatherType) {
+		if (weatherType==WeatherType.NO_DATA){
+			log.warn("날씨 유형이 NO_DATA인 경우는 제외합니다.");
+			return;
+		}
 		WeatherSafetyTip weatherSafetyTip = weatherSafetyTipRepository.findByType(weatherType);
 		List<WeatherThreat> weatherThreat = weatherThreatRepository.findAllByWeatherSafetyTip(weatherSafetyTip);
 		if (weatherThreat.isEmpty()) {
