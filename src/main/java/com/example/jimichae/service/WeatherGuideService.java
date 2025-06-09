@@ -25,6 +25,7 @@ import com.example.jimichae.config.WeatherGuideProperties;
 import com.example.jimichae.dto.GetBaseDateTime;
 import com.example.jimichae.dto.request.WeatherGuide.WeatherDetailRequest;
 import com.example.jimichae.dto.response.AccidentCaseAttachResponse;
+import com.example.jimichae.dto.response.WeatherAccidentResponse;
 import com.example.jimichae.dto.response.WeatherApiResponse;
 import com.example.jimichae.dto.response.WeatherInfoResponse;
 import com.example.jimichae.dto.response.WeatherThreatResponse;
@@ -221,8 +222,14 @@ public class WeatherGuideService {
 				.stream()
 				.map(ThreatSafetyMeasures::getSafetyMeasures)
 				.toList();
+			List<WeatherAccidentResponse> weatherAccidentResponses = weatherThreatAccidentCaseRepository.findAllByWeatherThreat(weatherThreat).stream().map(
+				weatherThreatAccidentCase -> {
+					WeatherAccidentCase weatherAccidentCase = weatherThreatAccidentCase.getWeatherAccidentCase();
+					return WeatherAccidentResponse.builder().title(weatherAccidentCase.getTitle()).description(weatherAccidentCase.getSummation()).fileUrl(weatherAccidentCase.getFileUrl()).build();
+				}
+			).toList();
 			return WeatherThreatResponse.builder().type(threat.getName()).measure(safetyMeasures)
-				.weatherAccidents(List.of()) // TODO : 사고별 사례 추가
+				.weatherAccidents(weatherAccidentResponses)
 				.build();
 			}
 		).toList();
