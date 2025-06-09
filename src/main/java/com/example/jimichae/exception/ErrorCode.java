@@ -37,12 +37,14 @@ public enum ErrorCode{
 	// External API error 11000대
 	REST_CLIENT_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, -11001, "외부 API 호출 중 에러 발생"),
 	RETRIES_EXCEEDED_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, -11002, "외부 API 호출 재시도 횟수 초과"),
-
-	// Institution API error 11000대
-	INVALID_ADDRESS_TO_POINT(HttpStatus.BAD_REQUEST, -11000, "주소를 Point로 변환할 수 없습니다."),
+	INVALID_ADDRESS_TO_POINT(HttpStatus.BAD_REQUEST, -11003, "주소를 Point로 변환할 수 없습니다."),
 
 	// ChatAPI error 12000대
-	NOT_CLIENT_USED(HttpStatus.FORBIDDEN, -12001, "클라이언트에서 사용하지 않는 API입니다.");
+	NOT_CLIENT_USED(HttpStatus.FORBIDDEN, -12001, "클라이언트에서 사용하지 않는 API입니다."),
+
+	// Weather API error 13000대
+	WEATHER_MEASURES_NOT_FOUND(HttpStatus.NOT_FOUND, -13001, "해당 날씨에 대한 정보가 존재하지 않습니다."),
+	WEATHER_THREAT_NOT_FOUND(HttpStatus.NOT_FOUND, -13002, "해당 날씨 위협에 대한 정보가 존재하지 않습니다.");
 
 	private final HttpStatus httpStatus;
 	private final int code;

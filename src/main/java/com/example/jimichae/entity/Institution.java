@@ -18,7 +18,7 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @RequiredArgsConstructor
-@SequenceGenerator(name = "institution_seq", sequenceName = "institution_seq", allocationSize = 1, initialValue = 1)
+@SequenceGenerator(name = "institution_seq", sequenceName = "institution_seq", allocationSize = 1)
 public class Institution {
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "institution_seq")

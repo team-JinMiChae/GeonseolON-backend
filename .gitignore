@@ -41,3 +41,5 @@ out/
 **/deployment.yaml
 **/service.yaml
 **/docker-compose.yml
+**/createEntity.sql
+**/Institution.xlsx
