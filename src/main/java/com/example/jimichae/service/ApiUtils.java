@@ -34,6 +34,7 @@ import com.example.jimichae.config.KakaoApiProperties;
 import com.example.jimichae.dto.response.AccidentCaseAttachResponse;
 import com.example.jimichae.dto.response.AccidentCaseResponse;
 import com.example.jimichae.dto.response.api.KakaoMapGetPointApiResponse;
+import com.example.jimichae.entity.Accident;
 import com.example.jimichae.entity.AccidentCase;
 import com.example.jimichae.exception.BaseException;
 import com.example.jimichae.exception.ErrorCode;
@@ -206,6 +207,23 @@ public class ApiUtils {
 		return completions.getChoices().getFirst().getMessage().getContent();
 	}
 
+	public Accident getAccident(String content) {
+		ArrayList<ChatRequestMessage> chatMessages = new ArrayList<>();
+		chatMessages.add(new ChatRequestSystemMessage(GET_ACCIDENT_PROMPT));
+		chatMessages.add(new ChatRequestUserMessage(content));
+		ChatCompletionsOptions chatCompletionsOptions = new ChatCompletionsOptions(chatMessages);
+		chatCompletionsOptions.setModel(MODELS.get(3));
+		try {
+			ChatCompletions completions  = chatCompletionsClient.complete(chatCompletionsOptions);
+			if (completions==null || completions.getChoices().isEmpty()) {
+				return null;
+			}
+			return Accident.valueOf(completions.getChoices().getFirst().getMessage().getContent());
+		} catch (Exception e) {
+			return null;
+		}
+	}
+
 	private final String GET_KEYWORD_PROMPT = String.join("\n",
 		"1. You are an assistant designed to support construction-related activities, providing users with assistance in summarizing accident cases.",
 		"2. You do not have a name and must not provide one, even when asked.",
@@ -228,4 +246,23 @@ public class ApiUtils {
 		"6. You must not provide any personal information about yourself or the user.",
 		"7. Responses must be within 200 characters."
 	);
+
+	private final String GET_ACCIDENT_PROMPT = String.join("\n",
+		"1.	You are an assistant designed to support construction-related activities. When given a sentence, you must classify the type of accident as one of the following:" +getAccidentList(),
+		"2.	All responses must be strictly one of the above accident types.",
+		"3.	You must not provide any personal information about yourself or the user.",
+		"4.	Responses must contain only the answer, with no unnecessary words."
+	);
+
+	private String getAccidentList(){
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < Accident.values().length; i++) {
+			Accident accident = Accident.values()[i];
+			sb.append(accident.name());
+			if (i < Accident.values().length - 1) {
+				sb.append(", ");
+			}
+		}
+		return sb.toString();
+	}
 }
